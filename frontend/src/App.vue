@@ -15,9 +15,13 @@
               <option v-for="t in ['Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ','Ⅵ']" :key="t" :value="t">{{t}} 阶</option>
             </select>
 
-            <select v-model="selectedCovenant" class="filter-select">
-              <option value="">所有盟约</option>
-              <option v-for="(cfg, name) in covenantsData" :key="name" :value="name">{{name}}</option>
+            <select v-model="selectedMainCov" class="filter-select">
+              <option value="">主盟约</option>
+              <option v-for="name in MAIN_COVENANTS" :key="name" :value="name">{{name}}</option>
+            </select>
+            <select v-model="selectedSubCov" class="filter-select">
+              <option value="">副盟约</option>
+              <option v-for="name in SUB_COVENANTS" :key="name" :value="name">{{name}}</option>
             </select>
           </div>
         </div>
@@ -101,77 +105,98 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { VueDraggable } from 'vue-draggable-plus'
+  import { ref, computed } from 'vue'
+  import { VueDraggable } from 'vue-draggable-plus'
 
-// 数据导入 (请确保路径正确)
-import operatorsConfig from './data/operators.json'
-import covenantsData from './data/covenants.json'
+  import operatorsConfig from './data/operators.json'
+  import covenantsData from './data/covenants.json'
+  import { onMounted, onUnmounted } from 'vue';
 
-// --- 状态数据 ---
-const teamLimit = ref(8) // 默认上限 8
-const searchQuery = ref('')
-const selectedTier = ref('')
-const selectedCovenant = ref('')
-const team = ref([])
-const isEffectsExpanded = ref(false)
+  // 挂载时设置标题
+  onMounted(() => {
+    document.title = "卫戍协议练功房";
+  });
 
-const getIconUrl = (name) => {
-  return `${import.meta.env.BASE_URL}resource/image/盟约_${name}.png`;
-}
+  // 卸载时恢复默认（可选）
+  onUnmounted(() => {
+    document.title = "卫戍协议助手";
+  });
 
-// 初始化全量干员列表
-const allOperators = Object.keys(operatorsConfig).map((name, index) => ({
-  id: index,
-  name: name,
-  avatar: `${import.meta.env.BASE_URL}resource/image/头像_${name}.png`,
-}))
-const operatorPool = ref(allOperators)
+  // --- 状态数据 ---
+  const teamLimit = ref(8) // 默认上限 8
+  const searchQuery = ref('')
+  const selectedTier = ref('')
+  // const selectedCovenant = ref('')
+  const selectedMainCov = ref('')
+  const selectedSubCov = ref('')
+  
+  const MAIN_COVENANTS = ['拉特兰', '维多利亚', '炎', '谢拉格', '萨尔贡', '叙拉古', '卡西米尔', '阿戈尔']
+  const SUB_COVENANTS = ['精准', '迅捷', '灵巧', '奥术', '坚守', '助力', '远见', '奇迹', '投资人', '突袭', '不屈', '调和', '协防干员', '独行']
+  
+  const team = ref([])
+  const isEffectsExpanded = ref(false)
 
-// --- 搜索与筛选逻辑 ---
-const filteredPool = computed(() => {
-  return operatorPool.value.filter(op => {
-    const data = operatorsConfig[op.name]
-    const matchName = op.name.includes(searchQuery.value)
-    const matchTier = selectedTier.value === '' || data.tier === selectedTier.value
-    const matchCov = selectedCovenant.value === '' || data.covenants.includes(selectedCovenant.value)
-    return matchName && matchTier && matchCov
-  })
-})
+  const getIconUrl = (name) => {
+    return `${import.meta.env.BASE_URL}resource/image/盟约_${name}.png`;
+  }
 
-// --- 盟约逻辑计算 ---
-const activeStats = computed(() => {
-  const stats = {}
-  const uniqueNames = new Set(team.value.map(op => op.name))
-  uniqueNames.forEach(name => {
-    const config = operatorsConfig[name]
-    if (config?.covenants) {
-      config.covenants.forEach(cov => {
-        stats[cov] = (stats[cov] || 0) + 1
-      })
-    }
-  })
-  return stats
-})
+  // 初始化全量干员列表
+  const allOperators = Object.keys(operatorsConfig).map((name, index) => ({
+    id: index,
+    name: name,
+    avatar: `${import.meta.env.BASE_URL}resource/image/头像_${name}.png`,
+  }))
+  const operatorPool = ref(allOperators)
 
-// 仅获取编队中涉及的盟约并排序
-const presentCovenants = computed(() => {
-  return Object.keys(activeStats.value).sort((a, b) => {
-    const aActive = activeStats.value[a] >= (covenantsData[a]?.activateCount || 99)
-    const bActive = activeStats.value[b] >= (covenantsData[b]?.activateCount || 99)
-    return bActive - aActive
-  })
-})
+  // --- 搜索与筛选逻辑 ---
+  const filteredPool = computed(() => {
+    return operatorPool.value.filter(op => {
+      const data = operatorsConfig[op.name]
 
-// 已激活的盟约对象列表
-const activatedList = computed(() => {
-  return Object.keys(activeStats.value)
-    .filter(name => {
-      const config = covenantsData[name]
-      return config && activeStats.value[name] >= config.activateCount
+      // 包括即可，模糊搜索
+      const matchName = op.name.includes(searchQuery.value)
+      const matchTier = selectedTier.value === '' || data.tier === selectedTier.value
+      const matchMainCov = selectedMainCov.value === '' || data.covenants.includes(selectedMainCov.value)
+      const matchSubCov = selectedSubCov.value === '' || data.covenants.includes(selectedSubCov.value)
+
+      // const matchCov = selectedCovenant.value === '' || data.covenants.includes(selectedCovenant.value)
+      return matchName && matchTier && matchMainCov && matchSubCov
     })
-    .map(name => ({ name, ...covenantsData[name] }))
-})
+  })
+
+  // --- 盟约逻辑计算 ---
+  const activeStats = computed(() => {
+    const stats = {}
+    const uniqueNames = new Set(team.value.map(op => op.name))
+    uniqueNames.forEach(name => {
+      const config = operatorsConfig[name]
+      if (config?.covenants) {
+        config.covenants.forEach(cov => {
+          stats[cov] = (stats[cov] || 0) + 1
+        })
+      }
+    })
+    return stats
+  })
+
+  // 仅获取编队中涉及的盟约并排序
+  const presentCovenants = computed(() => {
+    return Object.keys(activeStats.value).sort((a, b) => {
+      const aActive = activeStats.value[a] >= (covenantsData[a]?.activateCount || 99)
+      const bActive = activeStats.value[b] >= (covenantsData[b]?.activateCount || 99)
+      return bActive - aActive
+    })
+  })
+
+  // 已激活的盟约对象列表
+  const activatedList = computed(() => {
+    return Object.keys(activeStats.value)
+      .filter(name => {
+        const config = covenantsData[name]
+        return config && activeStats.value[name] >= config.activateCount
+      })
+      .map(name => ({ name, ...covenantsData[name] }))
+  })
 
   // --- 交互动作 ---
   const addToTeam = (op) => {
@@ -195,6 +220,9 @@ const activatedList = computed(() => {
   const handleImgError = (e) => {
     e.target.src = 'https://placehold.co/60x60?text=None'
   }
+const saveTeam = (e) => {
+    
+  }
 </script>
 
 <style scoped>
@@ -210,13 +238,14 @@ const activatedList = computed(() => {
 
 /* 筛选区样式 */
 .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-.panel-header.column { flex-direction: column; align-items: flex-start; gap: 12px; }
+.panel-header.column { flex-direction: column; gap: 12px; }
 .filter-controls { display: flex; gap: 10px; width: 100%; }
 .search-input, .filter-select {
   background: #2a2a2a; border: 1px solid #444; color: #fff;
   padding: 8px; border-radius: 4px; font-size: 13px;
+  min-width: 20%;
 }
-.search-input { flex: 1; }
+.search-input { flex: 1; min-width: 20%;}
 
 /* 干员单元格 */
 .op-unit { position: relative; width: 75px; text-align: center; cursor: pointer; }
