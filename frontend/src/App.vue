@@ -63,7 +63,7 @@
             :class="{ 'is-active': activeStats[name] >= covenantsData[name].activateCount }"
           >
             <div class="icon-wrapper">
-              <img class="single-icon" :src="`/resource/image/盟约_${name}.png`" @error="handleImgError" />
+              <img class="single-icon" :src="getIconUrl(name)" @error="handleImgError" />
               <span class="badge">{{ activeStats[name] }}</span>
             </div>
             <span class="cov-name">{{ name }}</span>
@@ -116,11 +116,15 @@ const selectedCovenant = ref('')
 const team = ref([])
 const isEffectsExpanded = ref(false)
 
+const getIconUrl = (name) => {
+  return `${import.meta.env.BASE_URL}resource/image/盟约_${name}.png`;
+}
+
 // 初始化全量干员列表
 const allOperators = Object.keys(operatorsConfig).map((name, index) => ({
   id: index,
   name: name,
-  avatar: `/resource/image/头像_${name}.png`,
+  avatar: `${import.meta.env.BASE_URL}resource/image/头像_${name}.png`,
 }))
 const operatorPool = ref(allOperators)
 

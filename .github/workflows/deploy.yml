@@ -2,7 +2,7 @@ name: 部署前端到 GitHub Pages
 
 on:
   push:
-    branches: [ main ] # 当你向 main 分支推送代码时触发
+    branches: [ master ] # 当你向 main 分支推送代码时触发
 
 jobs:
   build-and-deploy:
@@ -14,7 +14,7 @@ jobs:
       - name: 设置 Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: 安装并打包前端
         run: |
