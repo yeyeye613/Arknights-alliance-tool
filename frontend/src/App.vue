@@ -4,23 +4,23 @@
       <section class="operator-pool">
         <div class="panel-header column">
           <div class="title-row">
-            <h3>干员储备 ({{ filteredPool.length }})</h3>
+            <h3>干员 ({{ filteredPool.length }})</h3>
           </div>
           
           <div class="filter-controls">
             <input v-model="searchQuery" placeholder="搜索干员名称..." class="search-input" />
             
             <select v-model="selectedTier" class="filter-select">
-              <option value="">所有阶数</option>
+              <option value="">阶数</option>
               <option v-for="t in ['Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ','Ⅵ']" :key="t" :value="t">{{t}} 阶</option>
             </select>
 
             <select v-model="selectedMainCov" class="filter-select">
-              <option value="">主盟约</option>
+              <option value="">阵营</option>
               <option v-for="name in MAIN_COVENANTS" :key="name" :value="name">{{name}}</option>
             </select>
             <select v-model="selectedSubCov" class="filter-select">
-              <option value="">副盟约</option>
+              <option value="">盟约</option>
               <option v-for="name in SUB_COVENANTS" :key="name" :value="name">{{name}}</option>
             </select>
           </div>
@@ -94,7 +94,7 @@
             <ul>
               <li v-for="cov in activatedList" :key="cov.name">
                 <span class="gold">【{{ cov.name }}】</span>
-                <p v-for="(effect, i) in cov.effects" :key="i">· {{ effect.description }}</p>
+                <p class="activatedListDetails" v-for="(effect, i) in cov.effects" :key="i">· {{ effect.description }}</p>
               </li>
             </ul>
           </div>
@@ -229,7 +229,7 @@ const saveTeam = (e) => {
 .arknights-tool {
   background: #121212;
   color: #eee;
-  min-height: 100vh;
+  min-height: 95vh;
   padding: 20px;
   font-family: sans-serif;
 }
@@ -237,7 +237,7 @@ const saveTeam = (e) => {
 .container { display: flex; gap: 30px; height: 92vh; }
 
 /* 筛选区样式 */
-.panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.panel-header { display: flex; justify-content: space-between; align-items: center; }
 .panel-header.column { flex-direction: column; gap: 12px; }
 .filter-controls { display: flex; gap: 10px; width: 100%; }
 .search-input, .filter-select {
@@ -272,9 +272,9 @@ const saveTeam = (e) => {
 .limit-input { width: 35px; background: transparent; border: none; color: #ffcf00; font-weight: bold; text-align: center; outline: none; }
 
 /* 拖拽区与网格 */
-.operator-pool { width: 420px; display: flex; flex-direction: column; }
-.my-team { flex: 1; display: flex; flex-direction: column; }
-.drag-area { display: flex; flex-wrap: wrap; gap: 15px; padding: 15px; background: #181818; border: 1px solid #333; min-height: 100px; }
+.operator-pool { width: 30vw; display: flex; flex-direction: column; gap: 15px}
+.my-team { flex: 1; display: flex; flex-direction: column; gap:10px}
+.drag-area { display: flex; flex-wrap: wrap; gap: 15px; padding: 15px; background: #181818; border: 1px solid #333; min-height: 100px; align-content: flex-start; }
 .scrollable { overflow-y: auto; flex: 1; }
 .team-grid { border: 2px dashed #444; align-content: flex-start; }
 
@@ -293,4 +293,21 @@ const saveTeam = (e) => {
 .collapse-content li { margin-bottom: 12px; border-bottom: 1px solid #333; padding-bottom: 8px; }
 .collapse-content p { margin: 4px 0; font-size: 13px; color: #bbb; line-height: 1.4; }
 .gold { color: #ffcf00; font-weight: bold; margin-bottom: 5px; display: inline-block; }
+.activatedListDetails{ text-align: left; }
+
+@media (max-width: 1024px) {
+  .container {
+    flex-direction: column; /* 手机端：纵向 */
+  }
+  .my-team {
+    order: 1; /* 编队排在第一位，显示在屏幕上方 */
+  }
+  .operator-pool {
+    order: 2; /* 干员池排在第二位，显示在下方 */
+    width: 90vw;
+  }
+  .scrollable {
+    justify-content: space-evenly;
+  }
+}
 </style>
