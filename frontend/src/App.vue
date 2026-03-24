@@ -76,12 +76,11 @@
               <div v-show="collection.expanded" class="collection-teams">
                 <div v-for="(teamItem, teamIndex) in collection.teams" :key="teamIndex" class="saved-team-item">
                   <div class="team-preview">
+                    <span class="team-name">{{ teamItem.name }}</span>
                     <div class="team-avatars">
                       <img v-for="op in teamItem.team.slice(0, 9)" :key="op.id" :src="op.avatar"
                         class="preview-avatar" />
-                      <span v-if="teamItem.team.length > 9" class="more-count">+{{ teamItem.team.length - 10 }}</span>
                     </div>
-                    <span class="team-name">{{ teamItem.name }}</span>
                   </div>
                   <div class="team-actions">
                     <button @click="loadTeam(teamItem)" class="action-btn load-btn" v-if="!editMode" title="加载编队">
@@ -118,12 +117,11 @@
               <div v-show="ungroupedExpanded" class="collection-teams">
                 <div v-for="(teamItem, index) in savedTeams" :key="index" class="saved-team-item">
                   <div class="team-preview">
+                    <span class="team-name">{{ teamItem.name }}</span>
                     <div class="team-avatars">
                       <img v-for="op in teamItem.team.slice(0, 9)" :key="op.id" :src="op.avatar"
                         class="preview-avatar" />
-                      <span v-if="teamItem.team.length > 9" class="more-count">+{{ teamItem.team.length - 9 }}</span>
                     </div>
-                    <span class="team-name">{{ teamItem.name }}</span>
                   </div>
                   <div class="team-actions">
                     <button @click="loadTeam(teamItem)" class="action-btn load-btn" v-if="!editMode" title="加载编队">
@@ -1247,6 +1245,7 @@ const showTempMessage = (msg) => {
   display: flex;
   align-items: center;
   gap: 2px;
+  flex-wrap: wrap;
 }
 
 .preview-avatar {
@@ -1255,14 +1254,6 @@ const showTempMessage = (msg) => {
   border-radius: 4px;
   background: #333;
   object-fit: cover;
-}
-
-.more-count {
-  font-size: 10px;
-  background: #444;
-  padding: 2px 4px;
-  border-radius: 3px;
-  margin-left: 2px;
 }
 
 .team-name {
