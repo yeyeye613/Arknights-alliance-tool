@@ -1,8 +1,7 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import vue from "@vitejs/plugin-vue";
 import path from "path";
 
-// https://vite.dev/config/
 export default defineConfig({
   base: "/Arknights-alliance-tool/",
   plugins: [vue()],
@@ -11,5 +10,7 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  test: {
+    environment: "jsdom",
+  },
 });
-
