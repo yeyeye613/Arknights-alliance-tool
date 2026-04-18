@@ -1,118 +1,105 @@
 <template>
-  <div
-    v-if="show"
-    class="modal-overlay"
-    @click="closeModal"
+  <BaseModal
+    :show="show"
+    :title="title"
+    content-class="share-modal"
+    @close="closeModal"
   >
-    <div
-      class="modal-content share-modal"
-      @click.stop
-    >
-      <div class="modal-header">
-        <h3>{{ title }}</h3>
-        <button
-          @click="closeModal"
-          class="close-btn"
-        >
-          &times;
-        </button>
-      </div>
-
-      <div class="modal-body">
-        <div class="share-content">
-          <div class="share-code-section">
-            <label for="shareCode">分享码</label>
-            <div class="code-input-group">
-              <input
-                id="shareCode"
-                :value="shareCode"
-                type="text"
-                readonly
-                ref="codeInput"
-                @click="selectAll"
-              />
-              <button
-                @click="copyCode"
-                class="copy-btn"
-                :class="{ copied: copied }"
-              >
-                {{ copied ? "已复制" : "复制" }}
-              </button>
-            </div>
+    <div>
+      <div class="share-content">
+        <div class="share-code-section">
+          <label for="shareCode">分享码</label>
+          <div class="code-input-group">
+            <input
+              id="shareCode"
+              :value="shareCode"
+              type="text"
+              readonly
+              ref="codeInput"
+              @click="selectAll"
+            />
+            <button
+              @click="copyCode"
+              class="copy-btn"
+              :class="{ copied: copied }"
+            >
+              {{ copied ? "已复制" : "复制" }}
+            </button>
           </div>
+        </div>
 
-          <div
-            class="share-preview"
-            v-if="previewData"
-          >
-            <h4>预览</h4>
-            <div class="preview-content">
-              <div
-                v-if="props.shareType === 'team' || previewData.type === 'team'"
-              >
-                <div class="preview-team-name">{{ previewData.name }}</div>
-                <div class="preview-team-avatars">
-                  <img
-                    v-for="op in previewData.team"
-                    :key="op.id"
-                    :src="op.avatar"
-                    class="preview-avatar"
-                  />
-                </div>
-                <div class="preview-team-stats">
-                  干员数量: {{ previewData.team.length }}
-                </div>
+        <div
+          class="share-preview"
+          v-if="previewData"
+        >
+          <h4>预览</h4>
+          <div class="preview-content">
+            <div
+              v-if="props.shareType === 'team' || previewData.type === 'team'"
+            >
+              <div class="preview-team-name">{{ previewData.name }}</div>
+              <div class="preview-team-avatars">
+                <img
+                  v-for="op in previewData.team"
+                  :key="op.id"
+                  :src="op.avatar"
+                  class="preview-avatar"
+                />
               </div>
+              <div class="preview-team-stats">
+                干员数量: {{ previewData.team.length }}
+              </div>
+            </div>
 
-              <div
-                v-else-if="
-                  props.shareType === 'collection' ||
-                  previewData.type === 'collection'
-                "
-              >
-                <div class="preview-collection-name">
-                  {{ previewData.name }}
-                </div>
-                <div class="preview-collection-teams">
-                  <div
-                    v-for="team in previewData.teams"
-                    :key="team.name"
-                    class="preview-collection-team"
-                  >
-                    <span class="team-name">{{ team.name }}</span>
-                    <div class="team-avatars">
-                      <img
-                        v-for="op in team.team.slice(0, 5)"
-                        :key="op.id"
-                        :src="op.avatar"
-                        class="preview-avatar small"
-                      />
-                    </div>
+            <div
+              v-else-if="
+                props.shareType === 'collection' ||
+                previewData.type === 'collection'
+              "
+            >
+              <div class="preview-collection-name">
+                {{ previewData.name }}
+              </div>
+              <div class="preview-collection-teams">
+                <div
+                  v-for="team in previewData.teams"
+                  :key="team.name"
+                  class="preview-collection-team"
+                >
+                  <span class="team-name">{{ team.name }}</span>
+                  <div class="team-avatars">
+                    <img
+                      v-for="op in team.team.slice(0, 5)"
+                      :key="op.id"
+                      :src="op.avatar"
+                      class="preview-avatar small"
+                    />
                   </div>
                 </div>
-                <div class="preview-collection-stats">
-                  编队数量: {{ previewData.teams.length }}
-                </div>
+              </div>
+              <div class="preview-collection-stats">
+                编队数量: {{ previewData.teams.length }}
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      <div class="modal-footer">
-        <button
-          @click="closeModal"
-          class="btn close-btn"
-        >
-          关闭
-        </button>
-      </div>
     </div>
-  </div>
+
+    <template #footer>
+      <button
+        @click="closeModal"
+        class="btn cancel-btn"
+      >
+        关闭
+      </button>
+    </template>
+  </BaseModal>
 </template>
 
 <script setup>
   import { ref, nextTick, watch } from "vue";
+  import BaseModal from "./BaseModal.vue";
 
   const props = defineProps({
     show: Boolean,
@@ -166,67 +153,6 @@
 </script>
 
 <style scoped>
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-  }
-
-  .modal-content {
-    background: #1e1e1e;
-    border-radius: 8px;
-    width: 90%;
-    max-width: 600px;
-    max-height: 80vh;
-    overflow-y: auto;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-  }
-
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    border-bottom: 1px solid #333;
-  }
-
-  .modal-header h3 {
-    margin: 0;
-    font-size: 18px;
-  }
-
-  .close-btn {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: #888;
-    padding: 0;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: 0.2s;
-  }
-
-  .close-btn:hover {
-    background: #333;
-    color: white;
-  }
-
-  .modal-body {
-    padding: 20px;
-  }
-
   .share-content {
     display: flex;
     flex-direction: column;
@@ -352,37 +278,12 @@
     font-weight: 500;
   }
 
-  .modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    padding: 20px;
-    border-top: 1px solid #333;
-  }
-
-  .btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: 0.2s;
-  }
-
-  .close-btn {
-    background: #333;
-    color: white;
-  }
-
-  .close-btn:hover {
-    background: #444;
-  }
-
-  .share-modal .share-code-container,
-  .share-modal .share-preview {
+  .share-preview {
+    box-sizing: border-box;
     width: 100%;
   }
 
-  .share-modal .share-code {
+  .share-code {
     min-height: 70px;
   }
 </style>

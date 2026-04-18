@@ -206,7 +206,6 @@
         class="empty-teams"
       >
         <p>暂无保存的编队</p>
-        <p class="empty-hint">点击「新建编队」保存当前编队</p>
       </div>
     </div>
   </section>
@@ -328,7 +327,6 @@
   .team-collection {
     background: #1e1e1e;
     border-radius: 6px;
-    overflow: hidden;
   }
 
   .collection-header {
@@ -442,10 +440,6 @@
     color: #888;
   }
 
-  .empty-hint {
-    font-size: 12px;
-    margin-top: 8px;
-  }
 
   @media (max-width: 1024px) {
     .panel-content {

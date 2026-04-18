@@ -166,6 +166,7 @@
     display: flex;
     justify-content: space-around;
     align-items: center;
+    padding: 20px;
   }
 
   .panel-header h3 {

@@ -3,13 +3,13 @@
     <div class="panel-header column">
       <div class="filter-controls">
         <input
-          v-model="searchQueryModel"
+          v-model="searchQuery"
           placeholder="搜索干员名称..."
           class="search-input"
         />
 
         <select
-          v-model="selectedTierModel"
+          v-model="selectedTier"
           class="filter-select"
         >
           <option value="">阶数</option>
@@ -23,7 +23,7 @@
         </select>
 
         <select
-          v-model="selectedMainCovModel"
+          v-model="selectedMainCov"
           class="filter-select"
         >
           <option value="">阵营</option>
@@ -36,7 +36,7 @@
           </option>
         </select>
         <select
-          v-model="selectedSubCovModel"
+          v-model="selectedSubCov"
           class="filter-select"
         >
           <option value="">盟约</option>
@@ -51,6 +51,7 @@
       </div>
     </div>
 
+    <!-- TODO:  -->
     <VueDraggable
       v-model="filteredPool"
       :group="{ name: 'ops', pull: 'clone', put: false }"
@@ -75,61 +76,70 @@
 </template>
 
 <script setup>
-  import { computed } from "vue";
+  import { ref, computed } from "vue";
   import { VueDraggable } from "vue-draggable-plus";
   import operatorsConfig from "../data/operators.json";
   import { handleImgError } from "@/utils/index.js";
+  import { getAvatarUrl } from "@/utils/index.js";
 
-  const props = defineProps({
-    searchQuery: String,
-    selectedTier: String,
-    selectedMainCov: String,
-    selectedSubCov: String,
-    operatorPool: Array,
-    MAIN_COVENANTS: Array,
-    SUB_COVENANTS: Array,
-  });
+  // 盟约常量
+  const MAIN_COVENANTS = [
+    "拉特兰",
+    "维多利亚",
+    "炎",
+    "谢拉格",
+    "萨尔贡",
+    "叙拉古",
+    "卡西米尔",
+    "阿戈尔",
+  ];
+  const SUB_COVENANTS = [
+    "精准",
+    "迅捷",
+    "灵巧",
+    "奥术",
+    "坚守",
+    "助力",
+    "远见",
+    "奇迹",
+    "投资人",
+    "突袭",
+    "不屈",
+    "调和",
+    "协防干员",
+    "独行",
+];
+  
+  // 筛选状态
+  const searchQuery = ref("");
+  const selectedTier = ref("");
+  const selectedMainCov = ref("");
+  const selectedSubCov = ref("");
 
   const emit = defineEmits([
-    "update:searchQuery",
-    "update:selectedTier",
-    "update:selectedMainCov",
-    "update:selectedSubCov",
     "addToTeam",
   ]);
 
-  const searchQueryModel = computed({
-    get: () => props.searchQuery,
-    set: (value) => emit("update:searchQuery", value),
-  });
-
-  const selectedTierModel = computed({
-    get: () => props.selectedTier,
-    set: (value) => emit("update:selectedTier", value),
-  });
-
-  const selectedMainCovModel = computed({
-    get: () => props.selectedMainCov,
-    set: (value) => emit("update:selectedMainCov", value),
-  });
-
-  const selectedSubCovModel = computed({
-    get: () => props.selectedSubCov,
-    set: (value) => emit("update:selectedSubCov", value),
-  });
+  // 干员池处理
+  const allOperators = Object.keys(operatorsConfig).map((name, index) => ({
+    id: index,
+    name,
+    avatar: getAvatarUrl(name),
+  }));
+  const operatorPool = ref(allOperators);
 
   const filteredPool = computed(() => {
-    return (props.operatorPool || []).filter((op) => {
+    return operatorPool.value.filter((op) => {
       const data = operatorsConfig[op.name];
-      const matchName = op.name.includes(props.searchQuery);
+      const matchName = op.name.includes(searchQuery.value);
       const matchTier =
-        props.selectedTier === "" || data.tier === props.selectedTier;
+        selectedTier.value === "" || data.tier === selectedTier.value;
       const matchMainCov =
-        props.selectedMainCov === "" ||
-        data.covenants.includes(props.selectedMainCov);
+        selectedMainCov.value === "" ||
+        data.covenants.includes(selectedMainCov.value);
       const matchSubCov =
-        props.selectedSubCov === "" ||
-        data.covenants.includes(props.selectedSubCov);
+        selectedSubCov.value === "" ||
+        data.covenants.includes(selectedSubCov.value);
       return matchName && matchTier && matchMainCov && matchSubCov;
     });
   });
@@ -145,6 +155,7 @@
     display: flex;
     justify-content: space-around;
     align-items: center;
+    flex-wrap: wrap;
   }
 
   .panel-header.column {
