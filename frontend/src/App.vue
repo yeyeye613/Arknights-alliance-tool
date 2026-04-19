@@ -40,10 +40,8 @@
         :present-cov-list="presentCovList"
         :present-cov-counts="presentCovCounts"
         :active-cov-list="activeCovList"
-        :is-effects-expanded="isEffectsExpanded"
         @update:team="team = $event"
         @update:team-limit="updateTeamLimit"
-        @update:is-effects-expanded="updateIsEffectsExpanded"
         @open-save-team-modal="openSaveTeamModalWrapper"
         @clear-team="team = []"
         @remove-from-team="removeFromTeam"
@@ -125,7 +123,6 @@
   // 团队管理
   const {
     team,
-    isEffectsExpanded,
     presentCovList,
     presentCovCounts,
     activeCovList,
@@ -248,10 +245,6 @@
   const updateTeamLimit = (value) => {
     teamLimit.value = value;
     handleLimitChange();
-  };
-
-  const updateIsEffectsExpanded = (value) => {
-    isEffectsExpanded.value = value;
   };
 
   const saveTeamWrapper = (teamData) => {

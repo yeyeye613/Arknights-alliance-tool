@@ -98,7 +98,7 @@
 </template>
 
 <script setup>
-  import { computed } from "vue";
+  import { ref, computed } from "vue";
   import { VueDraggable } from "vue-draggable-plus";
   import CovenantsPanel from "./CovenantsPanel.vue";
   import { handleImgError } from "@/utils/index.js";
@@ -109,7 +109,6 @@
     presentCovList: Array,
     presentCovCounts: Object,
     activeCovList: Array,
-    isEffectsExpanded: Boolean,
   });
 
   const emit = defineEmits([
@@ -120,6 +119,8 @@
     "removeFromTeam",
   ]);
 
+  const isEffectsExpanded = ref(false);
+
   const teamLimitModel = computed({
     get: () => props.teamLimit,
     set: (value) => emit("update:teamLimit", value),
@@ -128,11 +129,6 @@
   const teamModel = computed({
     get: () => props.team,
     set: (value) => emit("update:team", value),
-  });
-
-  const isEffectsExpanded = computed({
-    get: () => props.isEffectsExpanded,
-    set: (value) => emit("update:isEffectsExpanded", value),
   });
 
   const handleLimitChange = () => {

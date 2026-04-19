@@ -3,7 +3,6 @@ import { useCovenantStats } from "@/composables/useCovenantStats.js";
 
 export function useTeamManagement(teamLimit) {
   const team = ref([]);
-  const isEffectsExpanded = ref(false);
 
   const { presentCovList, presentCovCounts, activeCovList } =
     useCovenantStats(team);
@@ -36,7 +35,6 @@ export function useTeamManagement(teamLimit) {
 
   return {
     team,
-    isEffectsExpanded,
     presentCovList,
     presentCovCounts,
     activeCovList,
