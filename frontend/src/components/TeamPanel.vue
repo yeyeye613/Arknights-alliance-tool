@@ -11,10 +11,11 @@
           max="20"
           @change="handleLimitChange"
           class="limit-input"
+          @input="teamLimitModel = Math.max(1, Math.min(20, teamLimitModel))"
         />
       </div>
       <button
-        @click="openSaveTeamModal"
+        @click="emit('save-team')"
         class="new-team-btn"
       >
         保存编队
@@ -98,25 +99,27 @@
 </template>
 
 <script setup>
-  import { ref, computed } from "vue";
+  import { ref, computed, toRef } from "vue";
   import { VueDraggable } from "vue-draggable-plus";
   import CovenantsPanel from "./CovenantsPanel.vue";
+  import { useCovenantStats } from "@/composables/useCovenantStats.js";
   import { handleImgError } from "@/utils/index.js";
 
   const props = defineProps({
     team: Array,
     teamLimit: Number,
-    presentCovList: Array,
-    presentCovCounts: Object,
-    activeCovList: Array,
   });
+
+  const { presentCovList, presentCovCounts, activeCovList } = useCovenantStats(
+    toRef(props, "team"),
+  );
 
   const emit = defineEmits([
     "update:team",
     "update:teamLimit",
-    "openSaveTeamModal",
-    "clearTeam",
-    "removeFromTeam",
+    "save-team",
+    "clear-team",
+    "remove-from-team",
   ]);
 
   const isEffectsExpanded = ref(false);
@@ -137,16 +140,12 @@
     }
   };
 
-  const openSaveTeamModal = () => {
-    emit("openSaveTeamModal");
-  };
-
   const clearTeam = () => {
-    emit("clearTeam");
+    emit("clear-team");
   };
 
   const removeFromTeam = (index) => {
-    emit("removeFromTeam", index);
+    emit("remove-from-team", index);
   };
 </script>
 

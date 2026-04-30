@@ -1,11 +1,7 @@
-import { ref, computed } from "vue";
-import { useCovenantStats } from "@/composables/useCovenantStats.js";
+import { ref } from "vue";
 
 export function useTeamManagement(teamLimit) {
   const team = ref([]);
-
-  const { presentCovList, presentCovCounts, activeCovList } =
-    useCovenantStats(team);
 
   const addToTeam = (op) => {
     if (team.value.length < teamLimit.value) {
@@ -35,9 +31,6 @@ export function useTeamManagement(teamLimit) {
 
   return {
     team,
-    presentCovList,
-    presentCovCounts,
-    activeCovList,
     addToTeam,
     removeFromTeam,
     handleLimitChange,

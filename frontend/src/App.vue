@@ -37,12 +37,9 @@
       <TeamPanel
         :team="team"
         :team-limit="teamLimit"
-        :present-cov-list="presentCovList"
-        :present-cov-counts="presentCovCounts"
-        :active-cov-list="activeCovList"
         @update:team="team = $event"
         @update:team-limit="updateTeamLimit"
-        @open-save-team-modal="openSaveTeamModalWrapper"
+        @save-team="openSaveTeamModalWrapper"
         @clear-team="team = []"
         @remove-from-team="removeFromTeam"
       />
@@ -122,9 +119,6 @@
   // 团队管理
   const {
     team,
-    presentCovList,
-    presentCovCounts,
-    activeCovList,
     addToTeam,
     removeFromTeam,
     handleLimitChange,
