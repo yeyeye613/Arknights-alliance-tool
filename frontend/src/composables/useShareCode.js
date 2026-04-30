@@ -152,6 +152,76 @@ export function useShareCode() {
     };
   };
 
+  // 新增操作方法
+  const shareTeam = (
+    teamItem,
+    currentShareTeam,
+    shareType,
+    shareCode,
+    showShareModal,
+    showTempMessage,
+  ) => {
+    currentShareTeam.value = { ...teamItem, type: "team" };
+    shareType.value = "team";
+    const code = generateTeamCode(teamItem);
+    if (code) {
+      shareCode.value = code;
+      showShareModal.value = true;
+    } else {
+      showTempMessage("生成分享码失败");
+    }
+  };
+
+  const shareCollection = (
+    collection,
+    currentShareCollection,
+    shareType,
+    shareCode,
+    showShareModal,
+    showTempMessage,
+  ) => {
+    currentShareCollection.value = { ...collection, type: "collection" };
+    shareType.value = "collection";
+    const code = generateCollectionCode(collection);
+    if (code) {
+      shareCode.value = code;
+      showShareModal.value = true;
+    } else {
+      showTempMessage("生成分享码失败");
+    }
+  };
+
+  const importFromCode = (
+    data,
+    savedTeams,
+    teamCollections,
+    saveAllData,
+    saveCollections,
+    showTempMessage,
+    closeImportModal,
+  ) => {
+    try {
+      const key = data.t || data.type;
+      if (key === "team") {
+        const newTeam = importTeam(data);
+        savedTeams.value.push(newTeam);
+        saveAllData();
+        showTempMessage(`成功导入编队「${newTeam.name}」`);
+      } else if (key === "collection") {
+        const importedCollection = importCollection(data);
+        teamCollections.value.push(importedCollection);
+        saveCollections();
+        showTempMessage(`成功导入合集「${importedCollection.name}」`);
+      } else {
+        showTempMessage("不支持的数据类型");
+      }
+
+      closeImportModal();
+    } catch (error) {
+      showTempMessage(error.message || "导入失败");
+    }
+  };
+
   return {
     generateTeamCode,
     generateCollectionCode,
@@ -160,5 +230,9 @@ export function useShareCode() {
     importTeam,
     importCollection,
     restoreOperators,
+    // 新增操作方法
+    shareTeam,
+    shareCollection,
+    importFromCode,
   };
 }

@@ -159,6 +159,68 @@ export function useTeamStorage() {
     saveCollections();
   };
 
+  // 新增：操作方法
+  const saveTeam = (teamData, team, showTempMessage) => {
+    const newTeam = {
+      name: teamData.name,
+      team: [...teamData.team],
+      createTime: new Date().toLocaleString(),
+    };
+
+    addOrUpdateTeam({
+      newTeam,
+      collectionName:
+        teamData.collectionIndex !== null
+          ? teamCollections.value[teamData.collectionIndex]?.name
+          : null,
+      editingLocation: null,
+    });
+
+    showTempMessage("编队保存成功");
+  };
+
+  const updateTeam = (teamData, team, showTempMessage) => {
+    const updatedTeam = {
+      name: teamData.name,
+      team: [...team],
+      createTime: new Date().toLocaleString(),
+    };
+
+    addOrUpdateTeam({
+      newTeam: updatedTeam,
+      collectionName:
+        teamData.collectionIndex !== null
+          ? teamCollections.value[teamData.collectionIndex]?.name
+          : null,
+      editingLocation:
+        teamData.originalIndex !== undefined
+          ? {
+              collectionIndex: teamData.originalCollectionIndex,
+              teamIndex: teamData.originalIndex,
+            }
+          : null,
+    });
+
+    showTempMessage("编队更新成功");
+  };
+
+  const deleteTeamOp = (collectionIndex, teamIndex, showTempMessage) => {
+    deleteTeam({ collectionIndex, teamIndex });
+    showTempMessage("编队已删除");
+  };
+
+  const moveToCollectionOp = (teamItem, index, showTempMessage) => {
+    const collectionName = prompt("请输入合集名称：", "");
+    if (!collectionName) return;
+
+    moveToCollection({
+      teamItem,
+      savedIndex: index,
+      targetCollectionName: collectionName,
+    });
+    showTempMessage(`已移动到合集「${collectionName}」`);
+  };
+
   return {
     savedTeams,
     teamCollections,
@@ -168,5 +230,10 @@ export function useTeamStorage() {
     addOrUpdateTeam,
     deleteTeam,
     moveToCollection,
+    // 新增操作方法
+    saveTeam,
+    updateTeam,
+    deleteTeamOp,
+    moveToCollectionOp,
   };
 }

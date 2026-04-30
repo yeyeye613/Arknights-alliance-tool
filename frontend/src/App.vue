@@ -25,11 +25,11 @@
           :saved-teams="savedTeams"
           :team-collections="teamCollections"
           @load-team="loadTeam"
-          @share-team="shareTeam"
-          @share-collection="shareCollection"
+          @share-team="shareTeamWrapper"
+          @share-collection="shareCollectionWrapper"
           @edit-team="editTeamWrapper"
-          @move-to-collection="moveToCollection"
-          @delete-team="deleteTeam"
+          @move-to-collection="moveToCollectionWrapper"
+          @delete-team="deleteTeamWrapper"
           @show-import-modal="showImportModal = true"
         />
       </div>
@@ -81,7 +81,7 @@
     <ImportModal
       :show="showImportModal"
       @close="closeImportModal"
-      @import="importFromCode"
+      @import="importFromCodeWrapper"
     />
 
     <!-- 临时提示消息 -->
@@ -108,7 +108,6 @@
   import { useShareCode } from "@/composables/useShareCode.js";
   import { useTeamManagement } from "@/composables/useTeamManagement.js";
   import { useModalState } from "@/composables/useModalState.js";
-  import { useTeamOperations } from "@/composables/useTeamOperations.js";
 
   // 标签页常量
   const TABS = {
@@ -143,6 +142,11 @@
     addOrUpdateTeam,
     deleteTeam: deleteStoredTeam,
     moveToCollection: moveStoredTeam,
+    // 新增操作方法
+    saveTeam,
+    updateTeam,
+    deleteTeamOp,
+    moveToCollectionOp,
   } = useTeamStorage();
 
   const {
@@ -150,6 +154,10 @@
     generateCollectionCode,
     importTeam: createTeamFromData,
     importCollection: createCollectionFromData,
+    // 新增操作方法
+    shareTeam,
+    shareCollection,
+    importFromCode,
   } = useShareCode();
 
   // 模态框状态
@@ -174,49 +182,15 @@
     closeShareModal,
     closeImportModal,
     showTempMessage,
-  } = useModalState();
-
-  // 团队操作
-  const {
-    saveTeam,
-    updateTeam,
+    // 新增操作方法
     editTeam,
-    deleteTeam,
-    moveToCollection,
-    shareTeam,
-    shareCollection,
-    importFromCode,
-  } = useTeamOperations(
-    useTeamStorage,
-    useShareCode,
-    useModalState,
-    teamCollections,
-    savedTeams,
-    saveCollections,
-    saveAllData,
-    addOrUpdateTeam,
-    deleteStoredTeam,
-    moveStoredTeam,
-    generateTeamCode,
-    generateCollectionCode,
-    createTeamFromData,
-    createCollectionFromData,
-    showTempMessage,
-    closeShareModal,
-    closeImportModal,
-    shareType,
-    shareCode,
-    currentShareTeam,
-    currentShareCollection,
-    showShareModal,
-  );
+  } = useModalState();
 
   // 初始化
   onMounted(() => {
     document.title = "卫戍协议练功房";
     initSavedTeams();
   });
-
 
   // 包装loadTeam以切换标签
   const loadTeam = (savedItem) => {
@@ -231,14 +205,7 @@
 
   // 包装editTeam
   const editTeamWrapper = (teamItem, collectionIndex, teamIndex) => {
-    editTeam(
-      teamItem,
-      collectionIndex,
-      teamIndex,
-      editingTeam,
-      editingLocation,
-      showTeamModal,
-    );
+    editTeam(teamItem, collectionIndex, teamIndex);
   };
 
   // 包装saveTeam和updateTeam
@@ -248,13 +215,56 @@
   };
 
   const saveTeamWrapper = (teamData) => {
-    saveTeam(teamData, team.value);
+    saveTeam(teamData, team.value, showTempMessage);
     closeTeamModal();
   };
 
   const updateTeamWrapper = (teamData) => {
-    updateTeam(teamData, team.value);
+    updateTeam(teamData, team.value, showTempMessage);
     closeTeamModal();
+  };
+
+  // 新增包装函数
+  const deleteTeamWrapper = (collectionIndex, teamIndex) => {
+    deleteTeamOp(collectionIndex, teamIndex, showTempMessage);
+  };
+
+  const moveToCollectionWrapper = (teamItem, index) => {
+    moveToCollectionOp(teamItem, index, showTempMessage);
+  };
+
+  const shareTeamWrapper = (teamItem) => {
+    shareTeam(
+      teamItem,
+      currentShareTeam,
+      shareType,
+      shareCode,
+      showShareModal,
+      showTempMessage,
+    );
+  };
+
+  const shareCollectionWrapper = (collection) => {
+    shareCollection(
+      collection,
+      currentShareCollection,
+      shareType,
+      shareCode,
+      showShareModal,
+      showTempMessage,
+    );
+  };
+
+  const importFromCodeWrapper = (data) => {
+    importFromCode(
+      data,
+      savedTeams,
+      teamCollections,
+      saveAllData,
+      saveCollections,
+      showTempMessage,
+      closeImportModal,
+    );
   };
 </script>
 
