@@ -48,6 +48,12 @@
             :src="op.avatar"
             @error="handleImgError"
           />
+          <span
+            v-if="op.isSelfOperator"
+            class="self-tag"
+          >
+            自选
+          </span>
           <button
             class="remove-btn"
             @click.stop="removeFromTeam(index)"
@@ -268,6 +274,20 @@
     height: 20px;
     cursor: pointer;
     font-weight: bold;
+  }
+
+  .self-tag {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(255, 207, 0, 0.2);
+    color: rgba(255, 240, 180, 0.88);
+    font-size: 9px;
+    font-weight: 500;
+    line-height: 1;
+    padding: 2px 3px;
+    border: 1px solid rgba(255, 207, 0, 0.28);
+    border-radius: 3px;
   }
 
   .name-label {

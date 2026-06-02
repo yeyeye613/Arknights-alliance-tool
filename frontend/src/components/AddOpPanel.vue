@@ -7,69 +7,64 @@
   >
     <div class="self-op-panel">
       <p class="desc">
-        五阶和六阶自选干员分别最多选择 2 名，且同一名干员不能同时加入两个阶数。
+        点击干员可在未选择、五阶、六阶之间切换。五阶和六阶分别最多选择 2 名。
       </p>
 
-      <input
-        v-model="searchQuery"
-        type="text"
-        class="search-input"
-        placeholder="搜索自选干员名称..."
-      />
-
-      <section class="tier-section">
-        <div class="section-header">
-          <h4>五阶自选</h4>
-          <span>{{ selectedTierFive.length }}/2</span>
-        </div>
-        <div class="operator-grid">
+      <div class="toolbar">
+        <input
+          v-model="searchQuery"
+          type="text"
+          class="search-input"
+          placeholder="搜索自选干员名称..."
+        />
+        <div class="toolbar-actions">
+          <span class="count-tag">五阶 {{ selectedTierFive.length }}/2</span>
+          <span class="count-tag">六阶 {{ selectedTierSix.length }}/2</span>
           <button
-            v-for="name in filteredOperatorNames"
-            :key="`v-${name}`"
             type="button"
-            class="operator-card"
-            :class="{
-              active: selectedTierFive.includes(name),
-              disabled: isDisabled(name, 'Ⅴ'),
-            }"
-            :disabled="isDisabled(name, 'Ⅴ')"
-            @click="toggleSelection('Ⅴ', name)"
+            class="clear-btn"
+            :disabled="selectedTierFive.length === 0"
+            @click="selectedTierFive = []"
           >
-            <img
-              :src="getAvatarUrl(name)"
-              :alt="name"
-            />
-            <span>{{ name }}</span>
+            清空五阶
+          </button>
+          <button
+            type="button"
+            class="clear-btn"
+            :disabled="selectedTierSix.length === 0"
+            @click="selectedTierSix = []"
+          >
+            清空六阶
           </button>
         </div>
-      </section>
+      </div>
 
-      <section class="tier-section">
-        <div class="section-header">
-          <h4>六阶自选</h4>
-          <span>{{ selectedTierSix.length }}/2</span>
-        </div>
-        <div class="operator-grid">
-          <button
-            v-for="name in filteredOperatorNames"
-            :key="`vi-${name}`"
-            type="button"
-            class="operator-card"
-            :class="{
-              active: selectedTierSix.includes(name),
-              disabled: isDisabled(name, 'Ⅵ'),
-            }"
-            :disabled="isDisabled(name, 'Ⅵ')"
-            @click="toggleSelection('Ⅵ', name)"
+      <div class="operator-grid">
+        <button
+          v-for="name in filteredOperatorNames"
+          :key="name"
+          type="button"
+          class="operator-card"
+          :class="{
+            active: getSelectedTier(name),
+            'tier-five': getSelectedTier(name) === 'Ⅴ',
+            'tier-six': getSelectedTier(name) === 'Ⅵ',
+          }"
+          @click="toggleSelection(name)"
+        >
+          <img
+            :src="getAvatarUrl(name)"
+            :alt="name"
+          />
+          <span>{{ name }}</span>
+          <span
+            v-if="getSelectedTier(name)"
+            class="selected-tier-tag"
           >
-            <img
-              :src="getAvatarUrl(name)"
-              :alt="name"
-            />
-            <span>{{ name }}</span>
-          </button>
-        </div>
-      </section>
+            {{ getSelectedTier(name) }}
+          </span>
+        </button>
+      </div>
     </div>
 
     <template #footer>
@@ -137,35 +132,46 @@
     { immediate: true },
   );
 
-  const isDisabled = (name, tier) => {
-    if (tier === "Ⅴ") {
-      return (
-        selectedTierSix.value.includes(name) &&
-        !selectedTierFive.value.includes(name)
-      );
+  const getSelectedTier = (name) => {
+    if (selectedTierFive.value.includes(name)) {
+      return "Ⅴ";
     }
-    return (
-      selectedTierFive.value.includes(name) &&
-      !selectedTierSix.value.includes(name)
-    );
+    if (selectedTierSix.value.includes(name)) {
+      return "Ⅵ";
+    }
+    return "";
   };
 
-  const toggleSelection = (tier, name) => {
-    const target =
-      tier === "Ⅴ" ? selectedTierFive.value : selectedTierSix.value;
-    const index = target.indexOf(name);
+  const toggleSelection = (name) => {
+    const currentTier = getSelectedTier(name);
 
-    if (index >= 0) {
-      target.splice(index, 1);
+    if (currentTier === "Ⅴ") {
+      // 如果当前是五阶，点击则取消选择
+      selectedTierFive.value = selectedTierFive.value.filter(
+        (item) => item !== name,
+      );
       return;
     }
 
-    if (target.length >= 2) {
-      alert(`${tier}阶自选干员最多只能选择 2 名`);
+    if (currentTier === "Ⅵ") {
+      // 如果当前是六阶，点击则取消选择
+      selectedTierSix.value = selectedTierSix.value.filter(
+        (item) => item !== name,
+      );
       return;
     }
 
-    target.push(name);
+    // 如果未被选择，则按顺序尝试添加到五阶或六阶
+    if (selectedTierFive.value.length < 2) {
+      // 优先添加到五阶（如果未满）
+      selectedTierFive.value.push(name);
+    } else if (selectedTierSix.value.length < 2) {
+      // 如果五阶已满但六阶未满，则添加到六阶
+      selectedTierSix.value.push(name);
+    } else {
+      // 如果都满了，则给出提示
+      alert("五阶和六阶自选干员均已满员（各2名）");
+    }
   };
 
   const confirmSelection = () => {
@@ -205,14 +211,15 @@
     line-height: 1.5;
   }
 
-  .tier-section {
+  .toolbar {
     display: flex;
-    flex-direction: column;
     gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
   }
 
   .search-input {
-    width: 100%;
+    flex: 1 1 220px;
     background: #2a2a2a;
     border: 1px solid #444;
     color: #fff;
@@ -221,16 +228,41 @@
     font-size: 13px;
   }
 
-  .section-header {
+  .toolbar-actions {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .clear-btn {
+    background: transparent;
+    border: 1px solid #555;
+    color: #bbb;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  .clear-btn:hover:not(:disabled) {
+    border-color: #ffcf00;
     color: #ffcf00;
   }
 
-  .section-header h4 {
-    margin: 0;
-    font-size: 15px;
+  .clear-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .count-tag {
+    color: #ffcf00;
+    font-size: 12px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    background: #252525;
+    border: 1px solid #333;
   }
 
   .operator-grid {
@@ -240,6 +272,7 @@
   }
 
   .operator-card {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -263,6 +296,16 @@
     background: rgba(255, 207, 0, 0.12);
   }
 
+  .operator-card.tier-five {
+    border-color: #6ec1ff;
+    background: rgba(110, 193, 255, 0.12);
+  }
+
+  .operator-card.tier-six {
+    border-color: #ffcf00;
+    background: rgba(255, 207, 0, 0.12);
+  }
+
   .operator-card.disabled {
     opacity: 0.45;
     cursor: not-allowed;
@@ -281,6 +324,23 @@
     text-align: center;
     line-height: 1.3;
     word-break: break-all;
+  }
+
+  .selected-tier-tag {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 1px 5px;
+    border-radius: 0 6px 0 6px;
+    background: #ffcf00;
+    color: #121212;
+  }
+
+  .operator-card.tier-five .selected-tier-tag {
+    background: #6ec1ff;
+    color: #121212;
   }
 
   .confirm-btn {

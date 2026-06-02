@@ -76,6 +76,12 @@
           />
           <span class="name-label">{{ op.name }}</span>
           <span class="tier-tag">{{ getOperatorTier(op) }}</span>
+          <span
+            v-if="op.isSelfOperator"
+            class="self-tag"
+          >
+            自选
+          </span>
         </div>
       </VueDraggable>
     </div>
@@ -204,10 +210,11 @@
   }
 
   .filter-controls {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(72px, 0.8fr)) auto;
     gap: 10px;
     width: 100%;
-    flex-wrap: wrap;
+    align-items: center;
   }
 
   .search-input,
@@ -218,12 +225,11 @@
     padding: 8px;
     border-radius: 4px;
     font-size: 13px;
-    min-width: 20%;
+    min-width: 0;
   }
 
   .search-input {
-    flex: 1;
-    min-width: 20%;
+    width: 100%;
   }
 
   /* 干员单元格 */
@@ -260,6 +266,20 @@
     font-size: 10px;
     padding: 1px 4px;
     border-radius: 4px 0 4px 0;
+  }
+
+  .self-tag {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(255, 207, 0, 0.2);
+    color: rgba(255, 240, 180, 0.88);
+    font-size: 9px;
+    font-weight: 500;
+    line-height: 1;
+    padding: 2px 3px;
+    border: 1px solid rgba(255, 207, 0, 0.28);
+    border-radius: 3px;
   }
 
   /* 拖拽区与网格 */
@@ -308,9 +328,31 @@
     background: #ffdd44;
   }
 
+  @media (max-width: 1280px) {
+    .filter-controls {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .search-input {
+      grid-column: span 2;
+    }
+
+    .add-btn {
+      min-width: 0;
+    }
+  }
+
   @media (max-width: 1024px) {
     .operator-pool {
       width: 90vw;
+    }
+
+    .filter-controls {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .add-btn {
+      grid-column: span 2;
     }
   }
 </style>
