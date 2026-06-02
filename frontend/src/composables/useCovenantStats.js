@@ -4,6 +4,7 @@
  */
 import { computed } from "vue";
 import operatorsConfig from "../data/operators.json";
+import selfOpConfig from "../data/selfOp.json";
 import covenantsData from "../data/covenants.json";
 
 /**
@@ -18,7 +19,7 @@ function countCovenants(team) {
   const uniqueNames = [...new Set(team.map((op) => op.name))];
 
   uniqueNames.forEach((name) => {
-    const config = operatorsConfig[name];
+    const config = operatorsConfig[name] || selfOpConfig[name];
     if (config?.covenants) {
       config.covenants.forEach((cov) => {
         stats[cov] = (stats[cov] || 0) + 1;

@@ -60,7 +60,6 @@ export function useModalState() {
     }, 2000);
   };
 
-  // 新增操作方法
   const editTeam = (teamItem, collectionIndex, teamIndex) => {
     editingTeam.value = teamItem;
     editingLocation.value = { collectionIndex, teamIndex };
@@ -88,7 +87,6 @@ export function useModalState() {
     closeShareModal,
     closeImportModal,
     showTempMessage,
-    // 新增操作方法
     editTeam,
   };
 }

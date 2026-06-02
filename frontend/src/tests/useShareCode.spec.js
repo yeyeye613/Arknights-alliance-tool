@@ -59,6 +59,14 @@ describe("useShareCode composable", () => {
     expect(imported.teams[0].team[0].name).toBe("隐现");
   });
 
+  it("should import self operator content from parsed code", () => {
+    const parsed = { t: "team", n: "自选队", ops: ["白铁"] };
+    const imported = importTeam(parsed);
+    expect(imported.name).toBe("自选队");
+    expect(imported.team.length).toBe(1);
+    expect(imported.team[0].name).toBe("白铁");
+  });
+
   it("should reject empty code", () => {
     expect(() => parseCode("")).toThrow("密语不能为空");
   });

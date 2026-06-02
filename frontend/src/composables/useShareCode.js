@@ -1,5 +1,6 @@
 import pako from "pako";
 import operatorsConfig from "../data/operators.json";
+import selfOpConfig from "../data/selfOp.json";
 import { getAvatarUrl } from "@/utils/index.js";
 
 const PFX_TEAM = "ARKTEAM";
@@ -102,7 +103,7 @@ export function useShareCode() {
   const restoreOperators = (names) => {
     return names
       .map((name, idx) => {
-        const opData = operatorsConfig[name];
+        const opData = operatorsConfig[name] || selfOpConfig[name];
         if (!opData) {
           console.warn(`未找到干员: ${name}`);
           return null;
