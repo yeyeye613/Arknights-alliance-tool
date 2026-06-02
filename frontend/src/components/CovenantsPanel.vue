@@ -4,7 +4,7 @@
     class="covenant-bar"
     v-if="presentCovList.length > 0"
   >
-  <!-- TODO: 激活6维那种进阶效果要有特殊提示 -->
+    <!-- TODO: 激活6维那种进阶效果要有特殊提示 -->
     <div
       v-for="name in presentCovList"
       :key="name"
@@ -12,6 +12,8 @@
       :class="{
         'is-active':
           presentCovCounts[name] >= covenantsData[name].activateCount,
+        'is-advanced': advancedCovLevels[name] > 0,
+        'is-advanced-2': advancedCovLevels[name] > 1,
       }"
     >
       <div class="icon-wrapper">
@@ -48,6 +50,10 @@
       type: Object,
       required: true,
     },
+    advancedCovLevels: {
+      type: Object,
+      required: true,
+    },
   });
 </script>
 <style>
@@ -67,7 +73,7 @@
     filter: grayscale(1);
     transition: 0.3s;
     text-align: center;
-    width: 45px;
+    width: 54px;
   }
 
   .cov-item.is-active {
@@ -76,15 +82,44 @@
     transform: scale(1.05);
   }
 
+  .cov-item.is-advanced {
+    opacity: 1;
+    filter: grayscale(0);
+  }
+
   .icon-wrapper {
     position: relative;
-    width: 40px;
+    width: 44px;
+    height: 44px;
     margin: 0 auto;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .single-icon {
-    max-width: 60px;
-    max-height: 60px;
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+  }
+
+  .cov-item.is-advanced .icon-wrapper {
+    background: rgba(88, 150, 255, 0.18);
+    box-shadow: 0 0 0 1px rgba(88, 150, 255, 0.45);
+  }
+
+  .cov-item.is-advanced .single-icon {
+    filter: drop-shadow(0 0 4px rgba(88, 150, 255, 0.45)) saturate(1.1);
+  }
+
+  .cov-item.is-advanced-2 .icon-wrapper {
+    background: rgba(190, 110, 255, 0.2);
+    box-shadow: 0 0 0 1px rgba(190, 110, 255, 0.52);
+  }
+
+  .cov-item.is-advanced-2 .single-icon {
+    filter: drop-shadow(0 0 5px rgba(190, 110, 255, 0.55)) saturate(1.18);
   }
 
   .badge {

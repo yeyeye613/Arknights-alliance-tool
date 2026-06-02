@@ -31,6 +31,7 @@
     <CovenantsPanel
       :presentCovList="presentCovList"
       :presentCovCounts="presentCovCounts"
+      :advanced-cov-levels="advancedCovLevels"
     ></CovenantsPanel>
 
     <VueDraggable
@@ -116,9 +117,8 @@
     teamLimit: Number,
   });
 
-  const { presentCovList, presentCovCounts, activeCovList } = useCovenantStats(
-    toRef(props, "team"),
-  );
+  const { presentCovList, presentCovCounts, activeCovList, advancedCovLevels } =
+    useCovenantStats(toRef(props, "team"));
 
   const emit = defineEmits([
     "update:team",
