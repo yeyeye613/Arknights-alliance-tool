@@ -96,7 +96,7 @@
 </template>
 
 <script setup>
-  import { ref, computed } from "vue";
+  import { ref, computed, onMounted, watch } from "vue";
   import { VueDraggable } from "vue-draggable-plus";
 
   import AddOpPanel from "./AddOpPanel.vue";
@@ -140,6 +140,7 @@
   const selectedSubCov = ref("");
   const showAddOpModal = ref(false);
   const selectedSelfOperators = ref([]);
+  const SELF_OP_STORAGE_KEY = "arknights_selected_self_operators";
 
   const emit = defineEmits(["addToTeam"]);
 
@@ -193,6 +194,40 @@
     selectedSelfOperators.value = operators;
     showAddOpModal.value = false;
   };
+
+  const normalizeSelfOperators = (operators) => {
+    if (!Array.isArray(operators)) {
+      return [];
+    }
+
+    return operators
+      .filter((op) => selfOpConfig[op?.name] && ["Ⅴ", "Ⅵ"].includes(op?.tier))
+      .map((op) => ({
+        name: op.name,
+        tier: op.tier,
+        avatar: getAvatarUrl(op.name),
+        isSelfOperator: true,
+      }));
+  };
+
+  onMounted(() => {
+    try {
+      const saved = localStorage.getItem(SELF_OP_STORAGE_KEY);
+      if (!saved) return;
+      selectedSelfOperators.value = normalizeSelfOperators(JSON.parse(saved));
+    } catch (error) {
+      console.error("加载自选干员缓存失败", error);
+      selectedSelfOperators.value = [];
+    }
+  });
+
+  watch(
+    selectedSelfOperators,
+    (value) => {
+      localStorage.setItem(SELF_OP_STORAGE_KEY, JSON.stringify(value));
+    },
+    { deep: true },
+  );
 </script>
 
 <style scoped>

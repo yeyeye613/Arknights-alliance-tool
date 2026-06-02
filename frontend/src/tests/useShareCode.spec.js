@@ -19,6 +19,7 @@ describe("useShareCode composable", () => {
     expect(code.startsWith("ARKTEAM")).toBe(true);
 
     const data = parseCode(code);
+    expect(data.v).toBe(2);
     expect(data.t).toBe("team");
     expect(data.n).toBe("测试队");
     expect(data.ops).toEqual(["干员1"]);
@@ -33,6 +34,7 @@ describe("useShareCode composable", () => {
     expect(code.startsWith("ARKCOL")).toBe(true);
 
     const data = parseCode(code);
+    expect(data.v).toBe(2);
     expect(data.t).toBe("collection");
     expect(data.n).toBe("合集");
     expect(data.teams[0].n).toBe("队1");
@@ -65,6 +67,25 @@ describe("useShareCode composable", () => {
     expect(imported.name).toBe("自选队");
     expect(imported.team.length).toBe(1);
     expect(imported.team[0].name).toBe("白铁");
+    expect(imported.team[0].isSelfOperator).toBe(true);
+  });
+
+  it("should preserve self operator tier in share code", () => {
+    const teamData = {
+      name: "自选分享队",
+      team: [
+        { id: 1, name: "白铁", avatar: "a", tier: "Ⅵ", isSelfOperator: true },
+      ],
+    };
+
+    const code = generateTeamCode(teamData);
+    const parsed = parseCode(code);
+    const imported = importTeam(parsed);
+
+    expect(parsed.ops).toEqual([{ n: "白铁", t: "Ⅵ", s: 1 }]);
+    expect(imported.team[0].name).toBe("白铁");
+    expect(imported.team[0].tier).toBe("Ⅵ");
+    expect(imported.team[0].isSelfOperator).toBe(true);
   });
 
   it("should reject empty code", () => {

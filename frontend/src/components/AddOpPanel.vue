@@ -145,33 +145,30 @@
   const toggleSelection = (name) => {
     const currentTier = getSelectedTier(name);
 
+    if (currentTier === "") {
+      if (selectedTierFive.value.length >= 2) {
+        alert("五阶自选干员最多只能选择 2 名");
+        return;
+      }
+      selectedTierFive.value.push(name);
+      return;
+    }
+
     if (currentTier === "Ⅴ") {
-      // 如果当前是五阶，点击则取消选择
+      if (selectedTierSix.value.length >= 2) {
+        alert("六阶自选干员最多只能选择 2 名");
+        return;
+      }
       selectedTierFive.value = selectedTierFive.value.filter(
         (item) => item !== name,
       );
-      return;
-    }
-
-    if (currentTier === "Ⅵ") {
-      // 如果当前是六阶，点击则取消选择
-      selectedTierSix.value = selectedTierSix.value.filter(
-        (item) => item !== name,
-      );
-      return;
-    }
-
-    // 如果未被选择，则按顺序尝试添加到五阶或六阶
-    if (selectedTierFive.value.length < 2) {
-      // 优先添加到五阶（如果未满）
-      selectedTierFive.value.push(name);
-    } else if (selectedTierSix.value.length < 2) {
-      // 如果五阶已满但六阶未满，则添加到六阶
       selectedTierSix.value.push(name);
-    } else {
-      // 如果都满了，则给出提示
-      alert("五阶和六阶自选干员均已满员（各2名）");
+      return;
     }
+
+    selectedTierSix.value = selectedTierSix.value.filter(
+      (item) => item !== name,
+    );
   };
 
   const confirmSelection = () => {

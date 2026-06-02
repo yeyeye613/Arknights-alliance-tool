@@ -7,6 +7,18 @@ const PFX_TEAM = "ARKTEAM";
 const PFX_COL = "ARKCOL";
 const PFX_FULL = "ARKFULL";
 
+function encodeOperator(op) {
+  if (op.isSelfOperator && op.tier) {
+    return {
+      n: op.name,
+      t: op.tier,
+      s: 1,
+    };
+  }
+
+  return op.name;
+}
+
 function compressAndEncode(obj) {
   const jsonStr = JSON.stringify(obj);
   const compressed = pako.deflate(jsonStr, { level: 9 });
@@ -26,22 +38,22 @@ function decodeAndDecompress(code) {
 export function useShareCode() {
   const generateTeamCode = (teamData) => {
     const compactTeam = {
-      v: 1,
+      v: 2,
       t: "team",
       n: teamData.name,
-      ops: teamData.team.map((op) => op.name),
+      ops: teamData.team.map(encodeOperator),
     };
     return `${PFX_TEAM}${compressAndEncode(compactTeam)}`;
   };
 
   const generateCollectionCode = (collection) => {
     const compactCollection = {
-      v: 1,
+      v: 2,
       t: "collection",
       n: collection.name,
       teams: collection.teams.map((team) => ({
         n: team.name,
-        ops: team.team.map((op) => op.name),
+        ops: team.team.map(encodeOperator),
       })),
     };
     return `${PFX_COL}${compressAndEncode(compactCollection)}`;
@@ -49,17 +61,17 @@ export function useShareCode() {
 
   const generateFullCode = (savedTeams, teamCollections) => {
     const fullData = {
-      v: 1,
+      v: 2,
       t: "full",
       teams: savedTeams.map((team) => ({
         n: team.name,
-        ops: team.team.map((op) => op.name),
+        ops: team.team.map(encodeOperator),
       })),
       collections: teamCollections.map((collection) => ({
         n: collection.name,
         teams: collection.teams.map((team) => ({
           n: team.name,
-          ops: team.team.map((op) => op.name),
+          ops: team.team.map(encodeOperator),
         })),
       })),
     };
@@ -90,7 +102,7 @@ export function useShareCode() {
     const decompressed = decodeAndDecompress(base64Data);
     const data = JSON.parse(decompressed);
 
-    if (data.v !== 1) {
+    if (data.v !== 1 && data.v !== 2) {
       throw new Error("不支持的密语版本");
     }
 
@@ -100,9 +112,14 @@ export function useShareCode() {
     return data;
   };
 
-  const restoreOperators = (names) => {
-    return names
-      .map((name, idx) => {
+  const restoreOperators = (ops) => {
+    return ops
+      .map((entry, idx) => {
+        const name = typeof entry === "string" ? entry : entry?.n;
+        const tier = typeof entry === "object" ? entry?.t : "";
+        const isSelfOperator =
+          typeof entry === "object" ? Boolean(entry?.s) : !operatorsConfig[name] && Boolean(selfOpConfig[name]);
+
         const opData = operatorsConfig[name] || selfOpConfig[name];
         if (!opData) {
           console.warn(`未找到干员: ${name}`);
@@ -112,6 +129,8 @@ export function useShareCode() {
           id: idx,
           name,
           avatar: getAvatarUrl(name),
+          tier: tier || undefined,
+          isSelfOperator,
         };
       })
       .filter((op) => op !== null);
