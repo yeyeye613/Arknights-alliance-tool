@@ -107,6 +107,7 @@ export function useTeamStorage() {
           name: collectionName,
           teams: [newTeam],
           expanded: true,
+          ...(newTeam.version ? { version: newTeam.version } : {}),
         });
         saveCollections();
       }
@@ -147,7 +148,12 @@ export function useTeamStorage() {
       (c) => c.name === targetCollectionName,
     );
     if (!collection) {
-      collection = { name: targetCollectionName, teams: [], expanded: true };
+      collection = {
+        name: targetCollectionName,
+        teams: [],
+        expanded: true,
+        ...(teamItem?.version ? { version: teamItem.version } : {}),
+      };
       teamCollections.value.push(collection);
     }
 
@@ -160,11 +166,12 @@ export function useTeamStorage() {
   };
 
   // 新增：操作方法
-  const saveTeam = (teamData, team, showTempMessage) => {
+  const saveTeam = (teamData, team, showTempMessage, versionId) => {
     const newTeam = {
       name: teamData.name,
       team: [...teamData.team],
       createTime: new Date().toLocaleString(),
+      ...(versionId ? { version: versionId } : {}),
     };
 
     addOrUpdateTeam({
@@ -179,11 +186,12 @@ export function useTeamStorage() {
     showTempMessage("编队保存成功");
   };
 
-  const updateTeam = (teamData, team, showTempMessage) => {
+  const updateTeam = (teamData, team, showTempMessage, versionId) => {
     const updatedTeam = {
       name: teamData.name,
       team: [...team],
       createTime: new Date().toLocaleString(),
+      ...(versionId ? { version: versionId } : {}),
     };
 
     addOrUpdateTeam({

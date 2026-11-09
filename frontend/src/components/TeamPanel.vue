@@ -34,6 +34,14 @@
       :advanced-cov-levels="advancedCovLevels"
     ></CovenantsPanel>
 
+    <p
+      v-if="missingCount > 0"
+      class="version-hint"
+    >
+      当前版本「{{ currentVersion.shortLabel }}」干员池中没有 {{ missingCount }}
+      名已选干员（红色虚线标记），这些干员不参与盟约层数统计
+    </p>
+
     <VueDraggable
       v-model="teamModel"
       group="ops"
@@ -43,6 +51,10 @@
         v-for="(op, index) in team"
         :key="index"
         class="op-unit"
+        :class="{ 'op-missing': isOpMissing(op) }"
+        @mouseenter="hoverTraits($event, op)"
+        @mousemove="moveTraitTooltip"
+        @mouseleave="hideTraitTooltip"
       >
         <div class="img-container">
           <img
@@ -110,6 +122,13 @@
   import { VueDraggable } from "vue-draggable-plus";
   import CovenantsPanel from "./CovenantsPanel.vue";
   import { useCovenantStats } from "@/composables/useCovenantStats.js";
+  import { useGameVersion } from "@/composables/useGameVersion.js";
+  import { getOperatorTraits, getOperatorCovenants } from "@/data/versions.js";
+  import {
+    showTraitTooltip,
+    moveTraitTooltip,
+    hideTraitTooltip,
+  } from "@/composables/useTraitTooltip.js";
   import { handleImgError } from "@/utils/index.js";
 
   const props = defineProps({
@@ -117,8 +136,38 @@
     teamLimit: Number,
   });
 
+  const { currentVersion } = useGameVersion();
+
   const { presentCovList, presentCovCounts, activeCovList, advancedCovLevels } =
-    useCovenantStats(toRef(props, "team"));
+    useCovenantStats(toRef(props, "team"), currentVersion);
+
+  /**
+   * 判断干员是否不属于当前版本干员池（切换版本后可能残留其他版本的干员）
+   * @param {Object} op - 编队中的干员
+   * @returns {boolean} 是否为跨版本干员
+   */
+  const isOpMissing = (op) => {
+    if (op?.isSelfOperator) {
+      return false;
+    }
+    return !currentVersion.value.operators[op?.name];
+  };
+
+  /** 当前编队中不属于当前版本的干员数量 */
+  const missingCount = computed(
+    () => (props.team || []).filter((op) => isOpMissing(op)).length,
+  );
+
+  /** 悬停展示干员特质与所属盟约（跨版本干员附提示） */
+  const hoverTraits = (event, op) => {
+    showTraitTooltip(
+      event,
+      op.name,
+      getOperatorTraits(op.name, currentVersion.value),
+      isOpMissing(op) ? "该干员不在当前版本的干员池中，不提供盟约层数" : "",
+      getOperatorCovenants(op.name, currentVersion.value),
+    );
+  };
 
   const emit = defineEmits([
     "update:team",
@@ -262,6 +311,17 @@
     position: relative;
   }
 
+  /* 跨版本干员：当前版本干员池中不存在 */
+  .op-unit.op-missing img {
+    outline: 2px dashed #ff6b6b;
+    outline-offset: -2px;
+    filter: grayscale(0.7) brightness(0.75);
+  }
+
+  .op-unit.op-missing .name-label {
+    color: #ff9a9a;
+  }
+
   .remove-btn {
     position: absolute;
     top: -6px;
@@ -304,6 +364,17 @@
     border: 1px solid #444;
     border-radius: 4px;
     background: #1e1e1e;
+  }
+
+  .version-hint {
+    margin: 0;
+    padding: 8px 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #ffb4b4;
+    background: rgba(255, 107, 107, 0.08);
+    border: 1px dashed rgba(255, 107, 107, 0.4);
+    border-radius: 4px;
   }
 
   .collapse-header {

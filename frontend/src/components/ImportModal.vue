@@ -116,7 +116,7 @@
       return {
         type: "team",
         name: parsedData.value.n,
-        team: restoreOperators(parsedData.value.ops || []),
+        team: restoreOperators(parsedData.value.ops || [], parsedData.value.g),
       };
     }
 
@@ -126,7 +126,7 @@
         name: parsedData.value.n,
         teams: (parsedData.value.teams || []).map((team) => ({
           name: team.n,
-          team: restoreOperators(team.ops || []),
+          team: restoreOperators(team.ops || [], parsedData.value.g),
         })),
       };
     }

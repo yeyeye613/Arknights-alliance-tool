@@ -1,6 +1,11 @@
 # 明日方舟卫戍协议配队工具
 
-一个基于 Vue 3 + Vite 的明日方舟「卫戍协议：盟约」配队小工具，用来辅助抓位、拼盟约、保存编队，以及通过分享码交流阵容。
+一个基于 Vue 3 + Vite 的明日方舟「卫戍协议」配队小工具，用来辅助抓位、拼盟约、保存编队，以及通过分享码交流阵容。
+
+支持两个游戏版本，可在页面右上角切换：
+
+- **卫戍协议：盟约**（2024 赛季数据）
+- **卫戍协议·规程**（当前赛季数据）
 
 在线体验：
 [https://yeyeye613.github.io/Arknights-alliance-tool/](https://yeyeye613.github.io/Arknights-alliance-tool/)
@@ -11,6 +16,7 @@
 
 在当前实现中，你可以：
 
+- 在「盟约」与「规程」两个版本之间切换，干员池、盟约效果、编队列表都会跟着切换
 - 从干员池中按名称、阶数、阵营、盟约筛选干员
 - 点击或拖拽干员进入当前编队
 - 实时查看当前编队的盟约层数和已激活效果
@@ -22,6 +28,15 @@
 
 ## 功能说明
 
+### 0. 游戏版本切换
+
+- 页面顶部提供版本切换按钮，选中状态会写入 `localStorage`，下次打开保持上次选择
+- 切换版本后，干员池、阵营/盟约筛选项、盟约效果文案、已保存编队列表都会对应变化
+- 已保存的编队、合集、分享码都会记录所属版本；加载其他版本的编队时会自动切换版本
+- 若当前编队中存在不属于当前版本的干员，会以红色虚线标记并提示，这些干员不参与盟约层数统计
+
+版本数据集中在 `src/data/versions.js` 注册，切换状态由 `src/composables/useGameVersion.js` 管理。
+
 ### 1. 干员池
 
 - 支持名称搜索
@@ -29,8 +44,9 @@
 - 支持按主阵营筛选
 - 支持按子盟约筛选
 - 展示干员头像与阶数信息
+- 鼠标悬停干员卡片（干员池或当前编队）可查看特质：类别、触发时机、效果与进阶后效果
 
-干员数据来源于 `src/data/operators.json`，图片资源位于 `public/resource/image`。
+干员数据按版本存放在 `src/data/operators.json`（盟约）与 `src/data/operators.guicheng.json`（规程），图片资源位于 `public/resource/image`。特质悬停提示由 `src/components/TraitTooltip.vue` + `src/composables/useTraitTooltip.js` 实现，浮层挂载到 `body` 上，避免被滚动容器裁剪。
 
 ### 2. 当前编队
 
@@ -48,6 +64,7 @@
 - 删除已保存编队
 - 将未归类编队移动到指定合集
 - 展开/收起合集查看内部编队
+- 按当前版本过滤展示编队（未标记版本的历史存档归入「盟约」）
 
 保存数据分为两类：
 
@@ -62,7 +79,7 @@
 - `ARKCOL`：合集分享码
 - `ARKFULL`：完整数据分享码基础实现已存在
 
-分享码实现位于 `src/composables/useShareCode.js`，使用 `pako` 对数据进行压缩和 Base64 编码。
+分享码实现位于 `src/composables/useShareCode.js`，使用 `pako` 对数据进行压缩和 Base64 编码。分享码中额外记录版本标识（`g` 字段），导入时会自动切换到对应版本。
 
 ## 技术栈
 
@@ -109,8 +126,8 @@ frontend
 │  └─ resource/image         # 干员与盟约图片资源
 ├─ src
 │  ├─ components             # 页面组件与弹窗组件
-│  ├─ composables            # 编队、分享、弹窗、存储逻辑
-│  ├─ data                   # 干员与盟约静态数据
+│  ├─ composables            # 版本、编队、分享、弹窗、存储逻辑
+│  ├─ data                   # 干员、盟约、版本注册表
 │  ├─ tests                  # Vitest 单测
 │  ├─ utils                  # 图片与通用工具方法
 │  ├─ App.vue                # 页面主入口
@@ -124,6 +141,7 @@ frontend
 
 ### 页面组件
 
+- `VersionSwitch.vue`：游戏版本切换
 - `PoolPanel.vue`：干员池筛选与选择
 - `TeamPanel.vue`：当前编队与盟约效果展示
 - `SavedTeamsPanel.vue`：已保存编队与合集管理
@@ -133,30 +151,72 @@ frontend
 
 ### 组合式函数
 
+- `useGameVersion.js`：当前游戏版本状态与数据视图
 - `useTeamManagement.js`：当前编队增删与上限处理
 - `useTeamStorage.js`：本地存储与合集管理
 - `useShareCode.js`：分享码生成、解析、导入
 - `useModalState.js`：弹窗状态与临时消息
-- `useCovenantStats.js`：盟约层数与激活效果统计
+- `useCovenantStats.js`：盟约层数与激活效果统计（按版本取数据）
 
 ## 数据说明
 
-### `operators.json`
+数据均整理自 [PRTS 明日方舟中文 Wiki](https://prts.wiki)：
 
-记录每位干员的：
+- 卫戍协议：盟约 —— <https://prts.wiki/w/卫戍协议：盟约>
+- 卫戍协议·规程 / PRTS盟约记录 —— <https://prts.wiki/w/卫戍协议·规程/PRTS盟约记录>
 
-- 阶数
-- 所属阵营/盟约
-- 特性说明
+### `versions.js`
 
-### `covenants.json`
+版本注册表，声明每个版本可用的盟约数据、干员数据与展示文案：
+
+```js
+{
+  id: "guicheng",
+  label: "卫戍协议·规程",
+  covenants: covenantsGuicheng,
+  operators: operatorsGuicheng,
+  selfOperatorStrategy: "faction",
+}
+```
+
+`selfOperatorStrategy` 控制「自选干员」的盟约推断方式：
+
+- `direct`：直接使用 `selfOp.json` 中登记的核心盟约（盟约版本）
+- `faction`：按阵营匹配当前版本的核心盟约，匹配不到时归为「协防干员」（规程版本）
+
+### `covenants.json` / `covenants.guicheng.json`
 
 记录每个盟约的：
 
-- 激活条件
-- 基础效果
-- 在场效果
-- 关联干员列表
+- `group`：`core`（核心盟约）或 `additional`（附加盟约）
+- `activateCount`：激活所需人数
+- `effects`：基础效果 / 在场效果 / 层数效果
+- `operators`：关联干员列表
+
+### `operators.json` / `operators.guicheng.json`
+
+记录每位干员的：
+
+- 阶数（Ⅰ~Ⅵ）
+- 所属盟约列表
+- `traits`：特质列表，鼠标悬停在干员卡片上会展示
+
+每个特质对象形如：
+
+```json
+{
+  "type": "持续叠加",
+  "trigger": "进入休整期时",
+  "description": "转化2层【乌萨斯】临时层数为固定层数",
+  "upgraded": "转化4层【乌萨斯】临时层数为固定层数"
+}
+```
+
+- `type`：特质类别（作战能力 / 整备能力 / 单次叠加 / 持续叠加 / 特异化）
+- `trigger`：触发时机，正文中形如 `<战斗中>` 的条件标记会在提示框里渲染成行内标签
+- `upgraded`：进阶（叠加到更高层数）后的效果文本
+
+两个版本的特质数据均来自 PRTS：规程版取自《PRTS盟约记录》页面的「干员数据库」表格（143 人全覆盖）。
 
 ## 部署说明
 
@@ -174,19 +234,28 @@ base: "/Arknights-alliance-tool/"
 
 ## 测试现状
 
-当前仓库已经包含基础单元测试，主要覆盖：
+当前仓库已经包含单元测试，主要覆盖：
 
-- 分享码生成、解析、导入
+- 分享码生成、解析、导入（含版本标识）
 - 本地存储初始化、保存、移动、删除
+- 盟约层数、激活与进阶效果统计
+- 两个版本的数据完整性与差异
+- 版本切换后干员池、盟约统计联动
+- 已保存编队的版本过滤与索引一致性
+- 应用整体渲染冒烟测试
 
 测试文件位于：
 
 - `src/tests/useShareCode.spec.js`
 - `src/tests/useTeamStorage.spec.js`
+- `src/tests/useCovenantStats.spec.js`
+- `src/tests/gameVersion.spec.js`
+- `src/tests/traitTooltip.spec.js`
+- `src/tests/app.smoke.spec.js`
 
 ## 后续可扩展方向
 
-- 补充自选干员能力的完整交互
+- 自选干员在规程版本下按实际阵营更细粒度地匹配盟约
 - 增加装备系统与一次性装备管理
 - 完善完整数据导入导出入口
 - 增加更多异常处理与数据校验

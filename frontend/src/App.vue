@@ -1,5 +1,22 @@
 <template>
   <div class="arknights-tool">
+    <header class="app-header">
+      <div class="app-title">
+        <h1>卫戍协议练功房</h1>
+        <p class="app-subtitle">
+          {{ currentVersion.label }} · {{ currentVersion.desc }}
+          <a
+            class="source-link"
+            :href="currentVersion.source"
+            target="_blank"
+            rel="noopener"
+            >数据来源 PRTS</a
+          >
+        </p>
+      </div>
+      <VersionSwitch @change="handleVersionChange" />
+    </header>
+
     <main class="container">
       <div class="side-bar">
         <!-- 侧边栏选择功能 -->
@@ -24,6 +41,7 @@
           v-if="currentTab === TABS.TEAM.key"
           :saved-teams="savedTeams"
           :team-collections="teamCollections"
+          :current-version-id="currentVersionId"
           @load-team="loadTeam"
           @share-team="shareTeamWrapper"
           @share-collection="shareCollectionWrapper"
@@ -88,6 +106,9 @@
     >
       {{ tempMessage }}
     </div>
+
+    <!-- 全局唯一的特质悬停提示 -->
+    <TraitTooltip />
   </div>
 </template>
 
@@ -100,11 +121,18 @@
   import SaveTeamModal from "./components/SaveTeamModal.vue";
   import ShareModal from "./components/ShareModal.vue";
   import ImportModal from "./components/ImportModal.vue";
+  import VersionSwitch from "./components/VersionSwitch.vue";
+  import TraitTooltip from "./components/TraitTooltip.vue";
 
   import { useTeamStorage } from "@/composables/useTeamStorage.js";
   import { useShareCode } from "@/composables/useShareCode.js";
   import { useTeamManagement } from "@/composables/useTeamManagement.js";
   import { useModalState } from "@/composables/useModalState.js";
+  import { useGameVersion } from "@/composables/useGameVersion.js";
+  import { DEFAULT_VERSION_ID, getGameVersion } from "@/data/versions.js";
+
+  // 游戏版本
+  const { currentVersion, currentVersionId, setVersion } = useGameVersion();
 
   // 标签页常量
   const TABS = {
@@ -182,14 +210,24 @@
 
   // 初始化
   onMounted(() => {
-    document.title = "卫戍协议练功房";
+    document.title = `卫戍协议练功房 · ${currentVersion.value.shortLabel}`;
     initSavedTeams();
   });
 
   // 包装loadTeam以切换标签
   const loadTeam = (savedItem) => {
+    // 加载其他版本的编队时自动切换版本，避免盟约统计错乱
+    const teamVersion = savedItem?.version || DEFAULT_VERSION_ID;
+    if (teamVersion !== currentVersionId.value && setVersion(teamVersion)) {
+      showTempMessage(`已切换到「${getGameVersion(teamVersion).label}」`);
+    }
     loadTeamFromManagement(savedItem);
     currentTab.value = TABS.TEAM.key;
+  };
+
+  // 版本切换提示
+  const handleVersionChange = (id) => {
+    showTempMessage(`已切换到「${getGameVersion(id).label}」`);
   };
 
   // 包装openSaveTeamModal
@@ -209,12 +247,12 @@
   };
 
   const saveTeamWrapper = (teamData) => {
-    saveTeam(teamData, team.value, showTempMessage);
+    saveTeam(teamData, team.value, showTempMessage, currentVersionId.value);
     closeTeamModal();
   };
 
   const updateTeamWrapper = (teamData) => {
-    updateTeam(teamData, team.value, showTempMessage);
+    updateTeam(teamData, team.value, showTempMessage, currentVersionId.value);
     closeTeamModal();
   };
 
@@ -235,6 +273,7 @@
       shareCode,
       showShareModal,
       showTempMessage,
+      teamItem?.version || currentVersionId.value,
     );
   };
 
@@ -246,10 +285,17 @@
       shareCode,
       showShareModal,
       showTempMessage,
+      collection?.version || currentVersionId.value,
     );
   };
 
   const importFromCodeWrapper = (data) => {
+    // 分享码带有版本信息时，先切到对应版本再导入
+    const codeVersion = data?.g;
+    if (codeVersion && codeVersion !== currentVersionId.value) {
+      setVersion(codeVersion);
+      showTempMessage(`已切换到「${getGameVersion(codeVersion).label}」`);
+    }
     importFromCode(
       data,
       savedTeams,
@@ -258,6 +304,7 @@
       saveCollections,
       showTempMessage,
       closeImportModal,
+      codeVersion || currentVersionId.value,
     );
   };
 </script>
@@ -271,10 +318,45 @@
     font-family: sans-serif;
   }
 
+  .app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 0 4px 14px;
+  }
+
+  .app-title h1 {
+    margin: 0;
+    font-size: 20px;
+    letter-spacing: 1px;
+  }
+
+  .app-subtitle {
+    margin: 6px 0 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 12px;
+    color: #8a8a8a;
+  }
+
+  .source-link {
+    color: #7fb3ff;
+    text-decoration: none;
+    border-bottom: 1px dashed rgba(127, 179, 255, 0.45);
+  }
+
+  .source-link:hover {
+    color: #a9ccff;
+  }
+
   .container {
     display: flex;
     gap: 30px;
-    height: 92vh;
+    height: calc(92vh - 70px);
   }
 
   .tab-list {

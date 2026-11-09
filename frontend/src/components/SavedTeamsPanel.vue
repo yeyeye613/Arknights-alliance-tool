@@ -22,20 +22,20 @@
 
     <div class="saved-teams-list">
       <div
-        v-for="(collection, collectionIndex) in teamCollections"
-        :key="collectionIndex"
+        v-for="view in collectionViews"
+        :key="view.collectionIndex"
         class="team-collection"
       >
         <div
           class="collection-header"
-          @click="toggleCollection(collectionIndex)"
+          @click="toggleCollection(view.collectionIndex)"
         >
           <span class="collection-name"
-            >📁 {{ collection.name }} ({{ collection.teams.length }})</span
+            >📁 {{ view.collection.name }} ({{ view.teams.length }})</span
           >
           <div class="collection-actions">
             <button
-              @click.stop="shareCollection(collection)"
+              @click.stop="shareCollection(view.collection)"
               v-if="!editMode"
               class="action-btn share-small-btn"
               title="分享合集"
@@ -44,26 +44,26 @@
             </button>
             <span
               class="collection-arrow"
-              :class="{ expanded: collection.expanded }"
+              :class="{ expanded: view.collection.expanded }"
               >▼</span
             >
           </div>
         </div>
 
         <div
-          v-show="collection.expanded"
+          v-show="view.collection.expanded"
           class="collection-teams"
         >
           <div
-            v-for="(teamItem, teamIndex) in collection.teams"
-            :key="teamIndex"
+            v-for="entry in view.teams"
+            :key="entry.teamIndex"
             class="saved-team-item"
           >
             <div class="team-preview">
-              <span class="team-name">{{ teamItem.name }}</span>
+              <span class="team-name">{{ entry.team.name }}</span>
               <div class="team-avatars">
                 <img
-                  v-for="op in teamItem.team.slice(0, 9)"
+                  v-for="op in entry.team.team.slice(0, 9)"
                   :key="op.id"
                   :src="op.avatar"
                   class="preview-avatar"
@@ -72,7 +72,7 @@
             </div>
             <div class="team-actions">
               <button
-                @click="loadTeam(teamItem)"
+                @click="loadTeam(entry.team)"
                 class="action-btn load-btn"
                 v-if="!editMode"
                 title="加载编队"
@@ -80,7 +80,7 @@
                 加载
               </button>
               <button
-                @click="shareTeam(teamItem)"
+                @click="shareTeam(entry.team)"
                 class="action-btn share-small-btn"
                 v-if="!editMode"
                 title="分享编队"
@@ -88,7 +88,9 @@
                 分享
               </button>
               <button
-                @click="editTeam(teamItem, collectionIndex, teamIndex)"
+                @click="
+                  editTeam(entry.team, view.collectionIndex, entry.teamIndex)
+                "
                 class="action-btn edit-btn"
                 v-if="editMode"
                 title="编辑"
@@ -96,7 +98,7 @@
                 编辑
               </button>
               <button
-                @click="moveToCollection(teamItem, index)"
+                @click="moveToCollection(entry.team, entry.teamIndex)"
                 class="action-btn move-btn"
                 v-if="editMode"
                 title="移动到合集"
@@ -104,7 +106,7 @@
                 移动
               </button>
               <button
-                @click="deleteTeam(collectionIndex, teamIndex)"
+                @click="deleteTeam(view.collectionIndex, entry.teamIndex)"
                 class="action-btn delete-btn"
                 v-if="editMode"
                 title="删除"
@@ -118,7 +120,7 @@
 
       <!-- 未归类的独立编队 -->
       <div
-        v-if="savedTeams.length > 0"
+        v-if="savedTeamsView.length > 0"
         class="team-collection"
       >
         <div
@@ -126,7 +128,7 @@
           @click="toggleUngrouped"
         >
           <span class="collection-name"
-            >📂 未归类编队 ({{ savedTeams.length }})</span
+            >📂 未归类编队 ({{ savedTeamsView.length }})</span
           >
           <span
             class="collection-arrow"
@@ -140,15 +142,15 @@
           class="collection-teams"
         >
           <div
-            v-for="(teamItem, index) in savedTeams"
-            :key="index"
+            v-for="entry in savedTeamsView"
+            :key="entry.index"
             class="saved-team-item"
           >
             <div class="team-preview">
-              <span class="team-name">{{ teamItem.name }}</span>
+              <span class="team-name">{{ entry.team.name }}</span>
               <div class="team-avatars">
                 <img
-                  v-for="op in teamItem.team.slice(0, 9)"
+                  v-for="op in entry.team.team.slice(0, 9)"
                   :key="op.id"
                   :src="op.avatar"
                   class="preview-avatar"
@@ -157,7 +159,7 @@
             </div>
             <div class="team-actions">
               <button
-                @click="loadTeam(teamItem)"
+                @click="loadTeam(entry.team)"
                 class="action-btn load-btn"
                 v-if="!editMode"
                 title="加载编队"
@@ -165,7 +167,7 @@
                 加载
               </button>
               <button
-                @click="shareTeam(teamItem)"
+                @click="shareTeam(entry.team)"
                 class="action-btn share-small-btn"
                 v-if="!editMode"
                 title="分享编队"
@@ -173,7 +175,7 @@
                 分享
               </button>
               <button
-                @click="editTeam(teamItem, null, index)"
+                @click="editTeam(entry.team, null, entry.index)"
                 class="action-btn edit-btn"
                 v-if="editMode"
                 title="编辑"
@@ -181,7 +183,7 @@
                 编辑
               </button>
               <button
-                @click="moveToCollection(teamItem, index)"
+                @click="moveToCollection(entry.team, entry.index)"
                 class="action-btn move-btn"
                 v-if="editMode"
                 title="移动到合集"
@@ -189,7 +191,7 @@
                 移动
               </button>
               <button
-                @click="deleteTeam(null, index)"
+                @click="deleteTeam(null, entry.index)"
                 class="action-btn delete-btn"
                 v-if="editMode"
                 title="删除"
@@ -202,21 +204,26 @@
       </div>
 
       <div
-        v-if="savedTeams.length === 0 && teamCollections.length === 0"
+        v-if="savedTeamsView.length === 0 && collectionViews.length === 0"
         class="empty-teams"
       >
-        <p>暂无保存的编队</p>
+        <p>当前版本暂无保存的编队</p>
       </div>
     </div>
   </section>
 </template>
 
 <script setup>
-  import { ref } from "vue";
+  import { computed, ref } from "vue";
+  import { DEFAULT_VERSION_ID } from "@/data/versions.js";
 
   const props = defineProps({
     savedTeams: Array,
     teamCollections: Array,
+    currentVersionId: {
+      type: String,
+      default: DEFAULT_VERSION_ID,
+    },
   });
 
   const emit = defineEmits([
@@ -231,6 +238,31 @@
 
   const editMode = ref(false);
   const ungroupedExpanded = ref(true);
+
+  /** 编队所属版本（历史存档未标记版本时归入默认版本） */
+  const getTeamVersion = (teamItem) => teamItem?.version || DEFAULT_VERSION_ID;
+
+  /** 当前版本下的未归类编队（保留原始索引以便增删改） */
+  const savedTeamsView = computed(() =>
+    (props.savedTeams || [])
+      .map((team, index) => ({ team, index }))
+      .filter((entry) => getTeamVersion(entry.team) === props.currentVersionId),
+  );
+
+  /** 当前版本下的合集视图（合集内仅展示当前版本的编队） */
+  const collectionViews = computed(() =>
+    (props.teamCollections || [])
+      .map((collection, collectionIndex) => ({
+        collection,
+        collectionIndex,
+        teams: (collection.teams || [])
+          .map((team, teamIndex) => ({ team, teamIndex }))
+          .filter(
+            (entry) => getTeamVersion(entry.team) === props.currentVersionId,
+          ),
+      }))
+      .filter((view) => view.teams.length > 0),
+  );
 
   const loadTeam = (teamItem) => {
     emit("loadTeam", teamItem);

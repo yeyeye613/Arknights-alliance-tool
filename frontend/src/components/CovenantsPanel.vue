@@ -11,7 +11,7 @@
       class="cov-item"
       :class="{
         'is-active':
-          presentCovCounts[name] >= covenantsData[name].activateCount,
+          presentCovCounts[name] >= covenants[name]?.activateCount,
         'is-advanced': advancedCovLevels[name] > 0,
         'is-advanced-2': advancedCovLevels[name] > 1,
       }"
@@ -38,8 +38,11 @@
 </template>
 
 <script setup>
-  import covenantsData from "../data/covenants.json";
+  import { useGameVersion } from "@/composables/useGameVersion.js";
   import { handleImgError, getIconUrl } from "@/utils/index.js";
+
+  // 盟约数据随游戏版本切换
+  const { covenants } = useGameVersion();
 
   const props = defineProps({
     presentCovList: {

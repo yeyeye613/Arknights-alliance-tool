@@ -9,6 +9,12 @@
       <p class="desc">
         点击干员可在未选择、五阶、六阶之间切换。五阶和六阶分别最多选择 2 名。
       </p>
+      <p
+        v-if="currentVersion.selfOperatorStrategy === 'faction'"
+        class="desc version-desc"
+      >
+        当前为「{{ currentVersion.label }}」：自选干员按阵营匹配该版本的核心盟约，匹配不到时归为【协防干员】。
+      </p>
 
       <div class="toolbar">
         <input
@@ -90,7 +96,10 @@
 
   import BaseModal from "./BaseModal.vue";
   import selfOpConfig from "../data/selfOp.json";
+  import { useGameVersion } from "@/composables/useGameVersion.js";
   import { getAvatarUrl } from "@/utils/index.js";
+
+  const { currentVersion } = useGameVersion();
 
   const props = defineProps({
     show: Boolean,
@@ -206,6 +215,15 @@
     color: #bbb;
     font-size: 13px;
     line-height: 1.5;
+  }
+
+  .version-desc {
+    color: #ffcf00;
+    font-size: 12px;
+    background: rgba(255, 207, 0, 0.08);
+    border-left: 2px solid rgba(255, 207, 0, 0.5);
+    padding: 6px 10px;
+    border-radius: 3px;
   }
 
   .toolbar {

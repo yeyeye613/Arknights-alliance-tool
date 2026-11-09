@@ -28,7 +28,7 @@
         >
           <option value="">阵营</option>
           <option
-            v-for="name in MAIN_COVENANTS"
+            v-for="name in coreCovenants"
             :key="name"
             :value="name"
           >
@@ -41,7 +41,7 @@
         >
           <option value="">盟约</option>
           <option
-            v-for="name in SUB_COVENANTS"
+            v-for="name in additionalCovenants"
             :key="name"
             :value="name"
           >
@@ -69,13 +69,16 @@
           :key="op.id"
           class="op-unit"
           @click="addToTeam(op)"
+          @mouseenter="hoverTraits($event, op)"
+          @mousemove="moveTraitTooltip"
+          @mouseleave="hideTraitTooltip"
         >
           <img
             :src="op.avatar"
             @error="handleImgError"
           />
           <span class="name-label">{{ op.name }}</span>
-          <span class="tier-tag">{{ getOperatorTier(op) }}</span>
+          <span class="tier-tag">{{ getTier(op) }}</span>
           <span
             v-if="op.isSelfOperator"
             class="self-tag"
@@ -100,38 +103,27 @@
   import { VueDraggable } from "vue-draggable-plus";
 
   import AddOpPanel from "./AddOpPanel.vue";
-  import operatorsConfig from "../data/operators.json";
   import selfOpConfig from "../data/selfOp.json";
+  import {
+    getOperatorCovenants,
+    getOperatorTier,
+    getOperatorTraits,
+  } from "@/data/versions.js";
+  import { useGameVersion } from "@/composables/useGameVersion.js";
+  import {
+    showTraitTooltip,
+    moveTraitTooltip,
+    hideTraitTooltip,
+  } from "@/composables/useTraitTooltip.js";
   import { handleImgError } from "@/utils/index.js";
   import { getAvatarUrl } from "@/utils/index.js";
 
-  // 盟约常量
-  const MAIN_COVENANTS = [
-    "拉特兰",
-    "维多利亚",
-    "炎",
-    "谢拉格",
-    "萨尔贡",
-    "叙拉古",
-    "卡西米尔",
-    "阿戈尔",
-  ];
-  const SUB_COVENANTS = [
-    "精准",
-    "迅捷",
-    "灵巧",
-    "奥术",
-    "坚守",
-    "助力",
-    "远见",
-    "奇迹",
-    "投资人",
-    "突袭",
-    "不屈",
-    "调和",
-    "协防干员",
-    "独行",
-  ];
+  const {
+    currentVersion,
+    currentVersionId,
+    coreCovenants,
+    additionalCovenants,
+  } = useGameVersion();
 
   // 筛选状态
   const searchQuery = ref("");
@@ -145,26 +137,39 @@
   const emit = defineEmits(["addToTeam"]);
 
   // 干员池处理
-  const baseOperators = Object.keys(operatorsConfig).map((name, index) => ({
-    id: index,
-    name,
-    avatar: getAvatarUrl(name),
-  }));
+  const baseOperators = computed(() =>
+    Object.keys(currentVersion.value.operators).map((name, index) => ({
+      id: index,
+      name,
+      avatar: getAvatarUrl(name),
+    })),
+  );
 
   const operatorPool = computed(() => {
     const selfOperators = selectedSelfOperators.value.map((op, index) => ({
       id: `self-${op.tier}-${op.name}-${index}`,
       ...op,
     }));
-    return [...baseOperators, ...selfOperators];
+    return [...baseOperators.value, ...selfOperators];
   });
 
   const getOperatorConfig = (name) => {
-    return operatorsConfig[name] || selfOpConfig[name];
+    return currentVersion.value.operators[name] || selfOpConfig[name];
   };
 
-  const getOperatorTier = (op) => {
-    return op.tier || getOperatorConfig(op.name)?.tier || "";
+  const getTier = (op) => {
+    return op.tier || getOperatorTier(op.name, currentVersion.value) || "";
+  };
+
+  /** 悬停展示干员特质与所属盟约 */
+  const hoverTraits = (event, op) => {
+    showTraitTooltip(
+      event,
+      op.name,
+      getOperatorTraits(op.name, currentVersion.value),
+      "",
+      getOperatorCovenants(op.name, currentVersion.value),
+    );
   };
 
   const filteredPool = computed(() => {
@@ -173,17 +178,25 @@
       if (!data) {
         return false;
       }
+      const covenants = getOperatorCovenants(op.name, currentVersion.value);
       const matchName = op.name.includes(searchQuery.value);
-      const matchTier =
-        selectedTier.value === "" || getOperatorTier(op) === selectedTier.value;
+      const matchTier = selectedTier.value === "" || getTier(op) === selectedTier.value;
       const matchMainCov =
-        selectedMainCov.value === "" ||
-        data.covenants.includes(selectedMainCov.value);
+        selectedMainCov.value === "" || covenants.includes(selectedMainCov.value);
       const matchSubCov =
-        selectedSubCov.value === "" ||
-        data.covenants.includes(selectedSubCov.value);
+        selectedSubCov.value === "" || covenants.includes(selectedSubCov.value);
       return matchName && matchTier && matchMainCov && matchSubCov;
     });
+  });
+
+  // 切换版本时清理已失效的筛选条件
+  watch(currentVersionId, () => {
+    if (!coreCovenants.value.includes(selectedMainCov.value)) {
+      selectedMainCov.value = "";
+    }
+    if (!additionalCovenants.value.includes(selectedSubCov.value)) {
+      selectedSubCov.value = "";
+    }
   });
 
   const addToTeam = (op) => {

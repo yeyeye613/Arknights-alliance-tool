@@ -1,56 +1,62 @@
 /**
  * 盟约统计 Composables
- * 负责：统计编队中各盟约的数量、判断激活状态
+ * 负责：按当前游戏版本统计编队中各盟约的数量、判断激活状态
  */
-import { computed } from "vue";
-import operatorsConfig from "../data/operators.json";
-import selfOpConfig from "../data/selfOp.json";
-import covenantsData from "../data/covenants.json";
+import { computed, unref } from "vue";
+import {
+  getCovenantsByGroup,
+  getGameVersion,
+  getOperatorCovenants,
+  CORE_GROUP,
+} from "@/data/versions.js";
+import { useGameVersion } from "./useGameVersion.js";
 
-const CORE_COVENANTS = [
-  "拉特兰",
-  "维多利亚",
-  "炎",
-  "谢拉格",
-  "萨尔贡",
-  "叙拉古",
-  "卡西米尔",
-  "阿戈尔",
-];
+/** 调和类盟约会为核心盟约额外 +1 人数 */
+const HARMONY_COVENANT = "调和";
 
 /**
  * 统计编队中各盟约的数量
  * @param {Array} team - 编队数组 [{ name, avatar }]
+ * @param {Object} version - 当前版本数据（含 covenants / operators）
  * @returns {Object} 盟约名称 -> 数量
  */
-function countBaseCovenants(team) {
+function countBaseCovenants(team, version) {
   const stats = {};
 
   // 获取所有干员的名字（去重）
   const uniqueNames = [...new Set(team.map((op) => op.name))];
 
   uniqueNames.forEach((name) => {
-    const config = operatorsConfig[name] || selfOpConfig[name];
-    if (config?.covenants) {
-      config.covenants.forEach((cov) => {
-        stats[cov] = (stats[cov] || 0) + 1;
-      });
-    }
+    const operatorCovenants = getOperatorCovenants(name, version);
+    operatorCovenants.forEach((cov) => {
+      stats[cov] = (stats[cov] || 0) + 1;
+    });
   });
 
   return stats;
 }
 
-function applyHarmonyBonus(baseStats) {
+/**
+ * 应用调和加成：调和激活时，场上核心盟约人数 +1
+ * @param {Object} baseStats - 原始统计
+ * @param {Object} covenants - 当前版本盟约数据
+ * @returns {Object} 加成后的统计
+ */
+function applyHarmonyBonus(baseStats, covenants) {
   const nextStats = { ...baseStats };
   const harmonyActive =
-    (baseStats["调和"] || 0) >= (covenantsData["调和"]?.activateCount || 99);
+    (baseStats[HARMONY_COVENANT] || 0) >=
+    (covenants?.[HARMONY_COVENANT]?.activateCount || 99);
 
   if (!harmonyActive) {
     return nextStats;
   }
 
-  CORE_COVENANTS.forEach((name) => {
+  const coreCovenants = Object.keys(covenants || {}).filter(
+    (name) => covenants[name]?.group === CORE_GROUP,
+  );
+
+  coreCovenants.forEach((name) => {
     if ((baseStats[name] || 0) > 0) {
       nextStats[name] = baseStats[name] + 1;
     }
@@ -62,13 +68,14 @@ function applyHarmonyBonus(baseStats) {
 /**
  * 获取已激活的盟约列表
  * @param {Object} presentCovCounts - 盟约统计结果
- * @returns {Array} 已激活盟约数组 [{ name, ...covenantsData[name] }]
+ * @param {Object} covenants - 当前版本盟约数据
+ * @returns {Array} 已激活盟约数组 [{ name, ...covenants[name] }]
  */
-function getActivatedCovList(presentCovCounts) {
+function getActivatedCovList(presentCovCounts, covenants) {
   const activeCovList = [];
 
   Object.keys(presentCovCounts).forEach((name) => {
-    const config = covenantsData[name];
+    const config = covenants?.[name];
     if (config && presentCovCounts[name] >= config.activateCount) {
       activeCovList.push({ name, ...config });
     }
@@ -76,12 +83,18 @@ function getActivatedCovList(presentCovCounts) {
   return activeCovList;
 }
 
-function getAdvancedThresholds(name) {
-  const effects = covenantsData[name]?.effects || [];
+/**
+ * 提取盟约中「在场 N 名不同干员」类进阶效果的阈值
+ * @param {string} name - 盟约名称
+ * @param {Object} covenants - 当前版本盟约数据
+ * @returns {Array<number>} 去重升序的阈值
+ */
+function getAdvancedThresholds(name, covenants) {
+  const effects = covenants?.[name]?.effects || [];
   const thresholds = effects
     .map((effect) => {
       const condition = effect.condition || "";
-      const matched = condition.match(/^在场(\d+)名/);
+      const matched = condition.match(/^在场(\d+)名不同/);
       return matched ? Number(matched[1]) : null;
     })
     .filter((value) => value !== null);
@@ -89,11 +102,17 @@ function getAdvancedThresholds(name) {
   return [...new Set(thresholds)].sort((a, b) => a - b);
 }
 
-function getAdvancedCovLevels(presentCovCounts) {
+/**
+ * 计算各盟约已解锁的进阶等级
+ * @param {Object} presentCovCounts - 盟约统计结果
+ * @param {Object} covenants - 当前版本盟约数据
+ * @returns {Object} 盟约名称 -> 已解锁层级数
+ */
+function getAdvancedCovLevels(presentCovCounts, covenants) {
   const levels = {};
 
   Object.keys(presentCovCounts).forEach((name) => {
-    const thresholds = getAdvancedThresholds(name);
+    const thresholds = getAdvancedThresholds(name, covenants);
     levels[name] = thresholds.filter(
       (threshold) => presentCovCounts[name] >= threshold,
     ).length;
@@ -103,74 +122,71 @@ function getAdvancedCovLevels(presentCovCounts) {
 }
 
 /**
- * 获取编队中出现的盟约（用于排序显示）
+ * 获取编队中出现的盟约（用于排序显示），激活的排在前面
  * @param {Object} presentCovCounts - 盟约统计结果
- * @returns {Array} 盟约名称数组，激活的排在前面
+ * @param {Object} covenants - 当前版本盟约数据
+ * @returns {Array} 盟约名称数组
  */
-function getSortedCovenants(presentCovCounts) {
+function getSortedCovenants(presentCovCounts, covenants) {
   return Object.keys(presentCovCounts).sort((a, b) => {
     const aActive =
-      presentCovCounts[a] >= (covenantsData[a]?.activateCount || 99);
+      presentCovCounts[a] >= (covenants?.[a]?.activateCount || 99);
     const bActive =
-      presentCovCounts[b] >= (covenantsData[b]?.activateCount || 99);
+      presentCovCounts[b] >= (covenants?.[b]?.activateCount || 99);
     return bActive - aActive;
   });
 }
 
 /**
  * 主 composable：传入 team，返回所有盟约相关的计算属性
- * @param {Ref<Array>} teamRef - 编队的响应式引用
+ * @param {import('vue').Ref<Array>} teamRef - 编队的响应式引用
+ * @param {Object|import('vue').Ref<Object>} [versionSource] - 版本数据（含 covenants / operators），默认取当前版本
  * @returns {Object} 盟约相关的响应式数据
  */
-export function useCovenantStats(teamRef) {
-  const baseCovCounts = computed(() => countBaseCovenants(teamRef.value));
+export function useCovenantStats(teamRef, versionSource) {
+  const { currentVersion } = useGameVersion();
+
+  const version = computed(() => {
+    if (!versionSource) {
+      return currentVersion.value;
+    }
+    const resolved = unref(versionSource);
+    return resolved?.covenants ? resolved : getGameVersion(resolved);
+  });
+
+  const covenants = computed(() => version.value.covenants || {});
+
+  const baseCovCounts = computed(() =>
+    countBaseCovenants(teamRef.value, version.value),
+  );
 
   // 盟约统计（已应用调和加成）
   const presentCovCounts = computed(() =>
-    applyHarmonyBonus(baseCovCounts.value),
+    applyHarmonyBonus(baseCovCounts.value, covenants.value),
   );
 
   // 出现的盟约（排序后）
   const presentCovList = computed(() =>
-    getSortedCovenants(presentCovCounts.value),
+    getSortedCovenants(presentCovCounts.value, covenants.value),
   );
 
   // 已激活盟约列表
   const activeCovList = computed(() =>
-    getActivatedCovList(presentCovCounts.value),
+    getActivatedCovList(presentCovCounts.value, covenants.value),
   );
 
   // 触发进阶在场效果的盟约
   const advancedCovLevels = computed(() =>
-    getAdvancedCovLevels(presentCovCounts.value),
+    getAdvancedCovLevels(presentCovCounts.value, covenants.value),
   );
-
-  // // 获取指定盟约的激活状态
-  // const isCovenantActive = (covenantName) => {
-  //   const count = presentCovCounts.value[covenantName] || 0;
-  //   const config = covenantsData[covenantName];
-  //   return config ? count >= config.activateCount : false;
-  // };
-
-  // // 获取指定盟约的当前数量
-  // const getCovenantCount = (covenantName) => {
-  //   return presentCovCounts.value[covenantName] || 0;
-  // };
-
-  // // 获取指定盟约需要的数量
-  // const getCovenantRequired = (covenantName) => {
-  //   return covenantsData[covenantName]?.activateCount || 0;
-  // };
 
   return {
     // 数据
+    covenantsData: covenants, // 当前版本盟约数据
+    coreCovenants: computed(() => getCovenantsByGroup(version.value, CORE_GROUP)),
     presentCovCounts, // 所有盟约的统计 { 拉特兰: 2, 精准: 1 }
     presentCovList, // 出现的盟约名称（排序后）
     activeCovList, // 激活的盟约 详情
     advancedCovLevels,
-    // 方法
-    // isCovenantActive,
-    // getCovenantCount,
-    // getCovenantRequired,
   };
 }

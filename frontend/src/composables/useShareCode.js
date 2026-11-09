@@ -1,6 +1,10 @@
 import pako from "pako";
-import operatorsConfig from "../data/operators.json";
 import selfOpConfig from "../data/selfOp.json";
+import {
+  DEFAULT_VERSION_ID,
+  findOperatorEverywhere,
+  getGameVersion,
+} from "@/data/versions.js";
 import { getAvatarUrl } from "@/utils/index.js";
 
 const PFX_TEAM = "ARKTEAM";
@@ -36,17 +40,24 @@ function decodeAndDecompress(code) {
 }
 
 export function useShareCode() {
-  const generateTeamCode = (teamData) => {
+  /**
+   * 生成单个编队的分享码
+   * @param {Object} teamData - 编队数据
+   * @param {string} [versionId] - 所属游戏版本
+   * @returns {string} 分享码
+   */
+  const generateTeamCode = (teamData, versionId) => {
     const compactTeam = {
       v: 2,
       t: "team",
       n: teamData.name,
       ops: teamData.team.map(encodeOperator),
+      ...(versionId ? { g: versionId } : {}),
     };
     return `${PFX_TEAM}${compressAndEncode(compactTeam)}`;
   };
 
-  const generateCollectionCode = (collection) => {
+  const generateCollectionCode = (collection, versionId) => {
     const compactCollection = {
       v: 2,
       t: "collection",
@@ -55,11 +66,12 @@ export function useShareCode() {
         n: team.name,
         ops: team.team.map(encodeOperator),
       })),
+      ...(versionId ? { g: versionId } : {}),
     };
     return `${PFX_COL}${compressAndEncode(compactCollection)}`;
   };
 
-  const generateFullCode = (savedTeams, teamCollections) => {
+  const generateFullCode = (savedTeams, teamCollections, versionId) => {
     const fullData = {
       v: 2,
       t: "full",
@@ -74,6 +86,7 @@ export function useShareCode() {
           ops: team.team.map(encodeOperator),
         })),
       })),
+      ...(versionId ? { g: versionId } : {}),
     };
     return `${PFX_FULL}${compressAndEncode(fullData)}`;
   };
@@ -112,15 +125,24 @@ export function useShareCode() {
     return data;
   };
 
-  const restoreOperators = (ops) => {
+  /**
+   * 还原分享码中的干员列表
+   * @param {Array} ops - 分享码里的干员序列
+   * @param {string} [versionId] - 分享码所属游戏版本，用于判断是否为自选干员
+   * @returns {Array} 干员列表
+   */
+  const restoreOperators = (ops, versionId = DEFAULT_VERSION_ID) => {
+    const version = getGameVersion(versionId);
     return ops
       .map((entry, idx) => {
         const name = typeof entry === "string" ? entry : entry?.n;
         const tier = typeof entry === "object" ? entry?.t : "";
         const isSelfOperator =
-          typeof entry === "object" ? Boolean(entry?.s) : !operatorsConfig[name] && Boolean(selfOpConfig[name]);
+          typeof entry === "object"
+            ? Boolean(entry?.s)
+            : !version.operators[name] && Boolean(selfOpConfig[name]);
 
-        const opData = operatorsConfig[name] || selfOpConfig[name];
+        const opData = findOperatorEverywhere(name);
         if (!opData) {
           console.warn(`未找到干员: ${name}`);
           return null;
@@ -137,7 +159,7 @@ export function useShareCode() {
   };
 
   const importTeam = (data) => {
-    const teamOps = restoreOperators(data.ops);
+    const teamOps = restoreOperators(data.ops, data.g);
     if (teamOps.length === 0) {
       throw new Error("编队中没有有效干员");
     }
@@ -146,17 +168,19 @@ export function useShareCode() {
       name: data.n,
       team: teamOps,
       createTime: new Date().toLocaleString(),
+      ...(data.g ? { version: data.g } : {}),
     };
   };
 
   const importCollection = (data) => {
     const teams = data.teams
       .map((teamData) => {
-        const teamOps = restoreOperators(teamData.ops);
+        const teamOps = restoreOperators(teamData.ops, data.g);
         return {
           name: teamData.n,
           team: teamOps,
           createTime: new Date().toLocaleString(),
+          ...(data.g ? { version: data.g } : {}),
         };
       })
       .filter((team) => team.team.length > 0);
@@ -169,6 +193,7 @@ export function useShareCode() {
       name: data.n,
       teams,
       expanded: true,
+      ...(data.g ? { version: data.g } : {}),
     };
   };
 
@@ -180,10 +205,11 @@ export function useShareCode() {
     shareCode,
     showShareModal,
     showTempMessage,
+    versionId,
   ) => {
     currentShareTeam.value = { ...teamItem, type: "team" };
     shareType.value = "team";
-    const code = generateTeamCode(teamItem);
+    const code = generateTeamCode(teamItem, versionId);
     if (code) {
       shareCode.value = code;
       showShareModal.value = true;
@@ -199,10 +225,11 @@ export function useShareCode() {
     shareCode,
     showShareModal,
     showTempMessage,
+    versionId,
   ) => {
     currentShareCollection.value = { ...collection, type: "collection" };
     shareType.value = "collection";
-    const code = generateCollectionCode(collection);
+    const code = generateCollectionCode(collection, versionId);
     if (code) {
       shareCode.value = code;
       showShareModal.value = true;
@@ -219,16 +246,28 @@ export function useShareCode() {
     saveCollections,
     showTempMessage,
     closeImportModal,
+    versionId,
   ) => {
     try {
       const key = data.t || data.type;
       if (key === "team") {
         const newTeam = importTeam(data);
+        if (!newTeam.version && versionId) {
+          newTeam.version = versionId;
+        }
         savedTeams.value.push(newTeam);
         saveAllData();
         showTempMessage(`成功导入编队「${newTeam.name}」`);
       } else if (key === "collection") {
         const importedCollection = importCollection(data);
+        if (!importedCollection.version && versionId) {
+          importedCollection.version = versionId;
+          importedCollection.teams.forEach((team) => {
+            if (!team.version) {
+              team.version = versionId;
+            }
+          });
+        }
         teamCollections.value.push(importedCollection);
         saveCollections();
         showTempMessage(`成功导入合集「${importedCollection.name}」`);
