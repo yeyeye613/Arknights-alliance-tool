@@ -15,6 +15,9 @@
         'is-advanced': advancedCovLevels[name] > 0,
         'is-advanced-2': advancedCovLevels[name] > 1,
       }"
+      @mouseenter="hoverCovenant($event, name)"
+      @mousemove="moveCovenantTooltip"
+      @mouseleave="hideCovenantTooltip"
     >
       <div class="icon-wrapper">
         <img
@@ -40,6 +43,11 @@
 <script setup>
   import { useGameVersion } from "@/composables/useGameVersion.js";
   import { handleImgError, getIconUrl } from "@/utils/index.js";
+  import {
+    showCovenantTooltip,
+    moveCovenantTooltip,
+    hideCovenantTooltip,
+  } from "@/composables/useCovenantTooltip.js";
 
   // 盟约数据随游戏版本切换
   const { covenants } = useGameVersion();
@@ -58,6 +66,14 @@
       required: true,
     },
   });
+
+  /** 悬停编队盟约栏：附带当前编队人数与进阶等级，便于对照效果 */
+  const hoverCovenant = (event, name) => {
+    showCovenantTooltip(event, name, {
+      presentCount: props.presentCovCounts?.[name] ?? 0,
+      advanced: props.advancedCovLevels?.[name] || 0,
+    });
+  };
 </script>
 <style>
   /* 盟约展示栏 */
@@ -77,6 +93,7 @@
     transition: 0.3s;
     text-align: center;
     width: 54px;
+    cursor: help;
   }
 
   .cov-item.is-active {
@@ -149,5 +166,28 @@
     font-style: italic;
     font-size: 13px;
     margin-bottom: 15px;
+  }
+
+  @media (max-width: 768px) {
+    .covenant-bar {
+      gap: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    .cov-item {
+      width: 44px;
+    }
+
+    .icon-wrapper,
+    .single-icon {
+      width: 36px;
+      height: 36px;
+    }
+
+    .cov-name {
+      font-size: 9px;
+      margin-top: 3px;
+    }
   }
 </style>

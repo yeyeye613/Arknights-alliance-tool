@@ -430,4 +430,87 @@
   .activatedListDetails {
     text-align: left;
   }
+
+  @media (max-width: 768px) {
+    .my-team {
+      gap: 8px;
+    }
+
+    .panel-header {
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 4px 0 10px;
+    }
+
+    .panel-header h3 {
+      font-size: 15px;
+    }
+
+    .limit-setter {
+      order: 3;
+      margin-left: auto;
+      font-size: 12px;
+    }
+
+    .new-team-btn,
+    .clear-btn {
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+
+    .clear-btn {
+      padding: 8px 10px;
+    }
+
+    .drag-area {
+      gap: 10px 8px;
+      padding: 10px;
+      max-height: none;
+      min-height: 84px;
+    }
+
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+      align-content: flex-start;
+    }
+
+    .team-grid .op-unit {
+      width: auto;
+    }
+
+    .name-label {
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
+    .remove-btn {
+      width: 22px;
+      height: 22px;
+      top: -8px;
+      right: -8px;
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .collapse-header {
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+
+    .collapse-content {
+      padding: 12px;
+      max-height: 45vh;
+    }
+
+    .collapse-content p {
+      font-size: 12px;
+    }
+
+    .version-hint {
+      font-size: 11px;
+      padding: 7px 10px;
+    }
+  }
 </style>

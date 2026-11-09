@@ -163,4 +163,38 @@
   :deep(select) {
     box-sizing: border-box;
   }
+
+  @media (max-width: 768px) {
+    .modal-overlay {
+      align-items: flex-end;
+    }
+
+    .modal-content {
+      width: 100%;
+      max-width: 100%;
+      max-height: 90vh;
+      border-radius: 12px 12px 0 0;
+    }
+
+    .modal-header {
+      padding: 14px 16px;
+    }
+
+    .modal-header h3 {
+      font-size: 16px;
+    }
+
+    .modal-body {
+      padding: 14px 16px;
+    }
+
+    .modal-footer {
+      padding: 12px 16px;
+    }
+
+    :deep(.btn) {
+      padding: 9px 16px;
+      font-size: 13px;
+    }
+  }
 </style>

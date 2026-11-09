@@ -475,7 +475,58 @@
 
   @media (max-width: 1024px) {
     .panel-content {
-      width: 90vw;
+      width: 100%;
+    }
+
+    .saved-teams-list {
+      max-height: none;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .saved-teams-header {
+      padding: 10px 12px;
+      margin-bottom: 10px;
+    }
+
+    .saved-teams-header h3 {
+      font-size: 15px;
+    }
+
+    .saved-teams-list {
+      gap: 8px;
+    }
+
+    .collection-header {
+      padding: 10px 12px;
+    }
+
+    .collection-teams {
+      padding: 8px;
+    }
+
+    .saved-team-item {
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px 10px;
+    }
+
+    .team-preview {
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .preview-avatar {
+      width: 24px;
+      height: 24px;
+    }
+
+    .team-actions {
+      margin-left: auto;
+    }
+
+    .empty-teams {
+      padding: 24px 12px;
     }
   }
 </style>

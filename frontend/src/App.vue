@@ -109,6 +109,11 @@
 
     <!-- 全局唯一的特质悬停提示 -->
     <TraitTooltip />
+    <!-- 全局唯一的盟约效果悬停提示 -->
+    <CovenantTooltip />
+
+    <!-- Service Worker 发现新版本时的刷新提示 -->
+    <PwaUpdatePrompt />
   </div>
 </template>
 
@@ -123,6 +128,8 @@
   import ImportModal from "./components/ImportModal.vue";
   import VersionSwitch from "./components/VersionSwitch.vue";
   import TraitTooltip from "./components/TraitTooltip.vue";
+  import CovenantTooltip from "./components/CovenantTooltip.vue";
+  import PwaUpdatePrompt from "./components/PwaUpdatePrompt.vue";
 
   import { useTeamStorage } from "@/composables/useTeamStorage.js";
   import { useShareCode } from "@/composables/useShareCode.js";
@@ -315,7 +322,7 @@
     color: #eee;
     min-height: 95vh;
     padding: 20px;
-    font-family: sans-serif;
+    font-family: var(--sans, system-ui, sans-serif);
   }
 
   .app-header {
@@ -359,11 +366,17 @@
     height: calc(92vh - 70px);
   }
 
+  .side-bar {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
   .tab-list {
     display: flex;
     justify-content: space-around;
     padding: 20px;
-    font-family: sans-serif;
+    font-family: var(--sans, system-ui, sans-serif);
   }
 
   .tab-item {
@@ -417,10 +430,61 @@
   @media (max-width: 1024px) {
     .container {
       flex-direction: column;
+      height: auto;
+      min-height: 0;
+      gap: 16px;
     }
 
     .side-bar {
-      width: 90vw;
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .arknights-tool {
+      min-height: 100vh;
+      padding: 10px 10px 24px;
+    }
+
+    .app-header {
+      gap: 10px;
+      padding: 0 0 10px;
+    }
+
+    .app-title h1 {
+      font-size: 17px;
+      letter-spacing: 0.5px;
+    }
+
+    .app-subtitle {
+      margin-top: 4px;
+      gap: 6px;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .container {
+      gap: 12px;
+    }
+
+    .tab-list {
+      padding: 4px 0 10px;
+      gap: 6px;
+    }
+
+    .tab-item {
+      flex: 1;
+      text-align: center;
+      padding: 9px 10px;
+      font-size: 14px;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .temp-message {
+      bottom: 16px;
+      max-width: calc(100vw - 32px);
+      font-size: 13px;
+      padding: 7px 14px;
     }
   }
 </style>

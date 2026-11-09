@@ -100,7 +100,7 @@
               type="button"
               class="cov-icon"
               :class="{ active: selectedMainCov === name }"
-              :title="`${name}（点击筛选，再点取消）`"
+              v-on="covenantHoverEvents(name)"
               @click="
                 toggleFilter(selectedMainCov, name, (v) => (selectedMainCov = v))
               "
@@ -123,6 +123,7 @@
               type="button"
               class="chip"
               :class="{ active: selectedMainCov === name }"
+              v-on="covenantHoverEvents(name)"
               @click="
                 toggleFilter(selectedMainCov, name, (v) => (selectedMainCov = v))
               "
@@ -149,7 +150,7 @@
               type="button"
               class="cov-icon"
               :class="{ active: selectedSubCov === name }"
-              :title="`${name}（点击筛选，再点取消）`"
+              v-on="covenantHoverEvents(name)"
               @click="
                 toggleFilter(selectedSubCov, name, (v) => (selectedSubCov = v))
               "
@@ -172,6 +173,7 @@
               type="button"
               class="chip"
               :class="{ active: selectedSubCov === name }"
+              v-on="covenantHoverEvents(name)"
               @click="
                 toggleFilter(selectedSubCov, name, (v) => (selectedSubCov = v))
               "
@@ -279,7 +281,7 @@
             type="button"
             class="ban-icon"
             :class="{ banned: bannedCovenants.includes(cov) }"
-            :title="cov"
+            v-on="covenantHoverEvents(cov)"
             @click="toggleBan(cov)"
           >
             <span class="ban-icon-img">
@@ -313,7 +315,26 @@
       </div>
     </div>
 
-    <div class="drag-area scrollable">
+    <!-- 小屏折叠开关：仅在移动端显示，用于把干员列表收起以腾出编队空间 -->
+    <button
+      type="button"
+      class="pool-toggle"
+      :class="{ collapsed: isPoolCollapsed }"
+      :aria-expanded="!isPoolCollapsed"
+      @click="togglePoolCollapse"
+    >
+      <span class="pool-toggle-title">干员池</span>
+      <span class="pool-toggle-count">{{ filteredPool.length }}</span>
+      <span class="pool-toggle-hint">{{
+        isPoolCollapsed ? "已收起，点击展开" : "点击收起"
+      }}</span>
+      <span class="pool-toggle-arrow">▼</span>
+    </button>
+
+    <div
+      v-show="!isPoolCollapsed"
+      class="drag-area scrollable"
+    >
       <VueDraggable
         v-model="filteredPool"
         :group="{ name: 'ops', pull: 'clone', put: false }"
@@ -363,7 +384,7 @@
 </template>
 
 <script setup>
-  import { ref, computed, onMounted, watch } from "vue";
+  import { ref, computed, onMounted, onUnmounted, watch } from "vue";
   import { VueDraggable } from "vue-draggable-plus";
 
   import AddOpPanel from "./AddOpPanel.vue";
@@ -379,6 +400,12 @@
     moveTraitTooltip,
     hideTraitTooltip,
   } from "@/composables/useTraitTooltip.js";
+  import {
+    showCovenantTooltip,
+    moveCovenantTooltip,
+    hideCovenantTooltip,
+    isCoarsePointer,
+  } from "@/composables/useCovenantTooltip.js";
   import { handleImgError, getIconUrl, getAvatarUrl } from "@/utils/index.js";
 
   const {
@@ -392,6 +419,8 @@
 
   const FILTER_VIEW_KEY = "arknights_pool_filter_view";
   const FILTER_COLLAPSED_KEY = "arknights_pool_filter_collapsed";
+  /** 移动端断点，与样式中的媒体查询保持一致 */
+  const MOBILE_QUERY = "(max-width: 768px)";
 
   // 筛选状态
   const searchQuery = ref("");
@@ -408,14 +437,49 @@
   const selectedSelfOperators = ref([]);
   const SELF_OP_STORAGE_KEY = "arknights_selected_self_operators";
 
+  // 移动端：干员池折叠
+  const isMobile = ref(false);
+  const poolCollapsed = ref(false);
+  /** 仅在移动端生效，桌面端始终展开 */
+  const isPoolCollapsed = computed(
+    () => isMobile.value && poolCollapsed.value,
+  );
+  let mobileMediaQuery = null;
+
+  const togglePoolCollapse = () => {
+    poolCollapsed.value = !poolCollapsed.value;
+  };
+
+  /** 视口跨过断点时同步状态：回到宽屏自动展开，避免“列表消失” */
+  const handleViewportChange = (event) => {
+    isMobile.value = event.matches;
+    if (!event.matches) {
+      poolCollapsed.value = false;
+    }
+  };
+
   const emit = defineEmits(["addToTeam"]);
 
   /** 单选切换：点击已选项则取消，否则选中 */
   const toggleFilter = (current, value, setter) => {
+    // 触屏点按会同时触发 mouseenter，点完就收起提示，避免遮挡后续操作
+    if (isCoarsePointer()) {
+      hideCovenantTooltip();
+    }
     setter(current === value ? "" : value);
   };
 
+  /** 悬停盟约入口时展示效果详情（图标 / 文字 chip / Ban 列表共用） */
+  const covenantHoverEvents = (name) => ({
+    mouseenter: (event) => showCovenantTooltip(event, name),
+    mousemove: moveCovenantTooltip,
+    mouseleave: hideCovenantTooltip,
+  });
+
   const toggleBan = (cov) => {
+    if (isCoarsePointer()) {
+      hideCovenantTooltip();
+    }
     if (bannedCovenants.value.includes(cov)) {
       bannedCovenants.value = bannedCovenants.value.filter((c) => c !== cov);
     } else {
@@ -648,6 +712,29 @@
       filterView.value = savedView;
     }
     filterCollapsed.value = localStorage.getItem(FILTER_COLLAPSED_KEY) === "1";
+
+    // 监听小屏断点，用于干员池折叠
+    if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+      mobileMediaQuery = window.matchMedia(MOBILE_QUERY);
+      isMobile.value = mobileMediaQuery.matches;
+      if (typeof mobileMediaQuery.addEventListener === "function") {
+        mobileMediaQuery.addEventListener("change", handleViewportChange);
+      } else {
+        mobileMediaQuery.addListener?.(handleViewportChange);
+      }
+    }
+  });
+
+  onUnmounted(() => {
+    if (!mobileMediaQuery) {
+      return;
+    }
+    if (typeof mobileMediaQuery.removeEventListener === "function") {
+      mobileMediaQuery.removeEventListener("change", handleViewportChange);
+    } else {
+      mobileMediaQuery.removeListener?.(handleViewportChange);
+    }
+    mobileMediaQuery = null;
   });
 
   watch(
@@ -1164,6 +1251,11 @@
     gap: 12px;
   }
 
+  /* 移动端折叠开关：默认隐藏，仅小屏出现 */
+  .pool-toggle {
+    display: none;
+  }
+
   .drag-area {
     padding: 15px;
     background: #181818;
@@ -1171,6 +1263,7 @@
     min-height: 100px;
     max-height: 80vh;
     align-content: flex-start;
+    -webkit-overflow-scrolling: touch;
   }
 
   .pool-empty {
@@ -1228,11 +1321,193 @@
 
   @media (max-width: 1024px) {
     .operator-pool {
-      width: 90vw;
+      width: 100%;
     }
 
     .row-label {
       flex-basis: 34px;
+    }
+
+    .drag-area {
+      max-height: 60vh;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .operator-pool {
+      gap: 10px;
+    }
+
+    .filter-panel {
+      gap: 8px;
+      padding: 8px 10px;
+    }
+
+    .filter-head {
+      gap: 6px;
+    }
+
+    .search-input {
+      flex: 1 1 100%;
+      padding: 8px 10px;
+      font-size: 14px;
+    }
+
+    .head-actions {
+      width: 100%;
+      margin-left: 0;
+      gap: 6px;
+    }
+
+    .view-btn,
+    .collapse-btn {
+      padding: 8px 10px;
+      font-size: 12px;
+    }
+
+    .add-btn {
+      margin-left: auto;
+      padding: 8px 12px;
+    }
+
+    .row-label {
+      flex-basis: 30px;
+      font-size: 11px;
+      line-height: 30px;
+    }
+
+    .icon-filter-row {
+      gap: 6px;
+    }
+
+    .chip {
+      padding: 7px 9px;
+      font-size: 12px;
+    }
+
+    .cov-icon {
+      width: 34px;
+      height: 34px;
+    }
+
+    /* 干员池折叠条 */
+    .pool-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 10px 12px;
+      background: #1b1b1b;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #ccc;
+      font-size: 13px;
+      line-height: 1;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .pool-toggle:active {
+      background: #232323;
+    }
+
+    .pool-toggle-title {
+      font-weight: bold;
+      color: #eee;
+    }
+
+    .pool-toggle-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 20px;
+      padding: 0 6px;
+      background: rgba(255, 207, 0, 0.16);
+      border: 1px solid rgba(255, 207, 0, 0.4);
+      border-radius: 10px;
+      color: #ffcf00;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .pool-toggle-hint {
+      margin-left: auto;
+      font-size: 11px;
+      color: #777;
+      white-space: nowrap;
+    }
+
+    .pool-toggle-arrow {
+      font-size: 9px;
+      color: #888;
+      transition: transform 0.2s;
+    }
+
+    .pool-toggle.collapsed .pool-toggle-arrow {
+      transform: rotate(-90deg);
+    }
+
+    .pool-toggle.collapsed .pool-toggle-hint {
+      color: #999;
+    }
+
+    /* 干员网格：固定列宽改为自适应列 */
+    .drag-area {
+      padding: 10px;
+      max-height: 52vh;
+      min-height: 80px;
+    }
+
+    .pool-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+      gap: 10px 8px;
+    }
+
+    .pool-grid .op-unit {
+      width: auto;
+    }
+
+    .name-label {
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
+    .ban-body {
+      padding: 4px 10px 10px;
+    }
+
+    .ban-icon-grid {
+      grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+      gap: 8px 4px;
+    }
+
+    .ban-icon-img {
+      width: 34px;
+      height: 34px;
+    }
+
+    .ban-name {
+      font-size: 10px;
+    }
+
+    .active-chip {
+      padding: 5px 8px;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .ban-hint {
+      display: none;
+    }
+
+    .pool-toggle-hint {
+      display: none;
+    }
+
+    .pool-grid {
+      grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
     }
   }
 </style>

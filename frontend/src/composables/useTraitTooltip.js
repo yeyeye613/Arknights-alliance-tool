@@ -16,6 +16,25 @@ const state = reactive({
 
 const TOOLTIP_WIDTH = 280;
 const EDGE_MARGIN = 8;
+/** 触屏设备没有 mouseleave，提示改为自动消失 */
+const TOUCH_HIDE_DELAY = 2600;
+
+let autoHideTimer = null;
+
+/** 是否为触摸 / 无悬停能力的设备 */
+function isCoarsePointer() {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return false;
+  }
+  return window.matchMedia("(hover: none)").matches;
+}
+
+function clearAutoHide() {
+  if (autoHideTimer) {
+    clearTimeout(autoHideTimer);
+    autoHideTimer = null;
+  }
+}
 
 /** 计算提示框位置，贴边时向内收拢 */
 function updatePosition(event) {
@@ -55,6 +74,14 @@ export function showTraitTooltip(
   state.note = note;
   state.visible = true;
   updatePosition(event);
+
+  clearAutoHide();
+  if (isCoarsePointer()) {
+    autoHideTimer = setTimeout(() => {
+      state.visible = false;
+      autoHideTimer = null;
+    }, TOUCH_HIDE_DELAY);
+  }
 }
 
 /** 跟随鼠标移动 */
@@ -66,6 +93,7 @@ export function moveTraitTooltip(event) {
 
 /** 隐藏提示 */
 export function hideTraitTooltip() {
+  clearAutoHide();
   state.visible = false;
 }
 
