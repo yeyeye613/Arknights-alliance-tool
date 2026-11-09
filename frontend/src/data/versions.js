@@ -13,7 +13,12 @@ import covenantsMengyue from "./covenants.json";
 import operatorsMengyue from "./operators.json";
 import covenantsGuicheng from "./covenants.guicheng.json";
 import operatorsGuicheng from "./operators.guicheng.json";
+import equipmentsGuicheng from "./equipment.guicheng.json";
 import selfOpConfig from "./selfOp.json";
+import {
+  getMorphCovenant,
+  getOperatorEquipmentNames,
+} from "./equipment.js";
 
 /** 默认版本：保持与历史存档兼容 */
 export const DEFAULT_VERSION_ID = "mengyue";
@@ -35,6 +40,8 @@ export const GAME_VERSIONS = [
     selfOperatorStrategy: "direct",
     covenants: covenantsMengyue,
     operators: operatorsMengyue,
+    // 盟约版暂无装备数据库（PRTS 该页面未提供）
+    equipments: {},
   },
   {
     id: "guicheng",
@@ -47,6 +54,7 @@ export const GAME_VERSIONS = [
     selfOperatorStrategy: "faction",
     covenants: covenantsGuicheng,
     operators: operatorsGuicheng,
+    equipments: equipmentsGuicheng,
   },
 ];
 
@@ -112,6 +120,25 @@ export function getOperatorCovenants(name, version) {
   const coreCovenants = getCovenantsByGroup(version, CORE_GROUP);
   const matched = selfOp.covenants.filter((cov) => coreCovenants.includes(cov));
   return matched.length > 0 ? matched : ["协防干员"];
+}
+
+/**
+ * 解析干员的有效盟约（含装备加成）
+ * 「变形同构体」与指定装备同携时，携带者视为对应盟约成员
+ * @param {Object|string} op - 编队干员 { name, equipments? } 或干员名
+ * @param {Object} version - 版本数据
+ * @returns {Array<string>} 盟约名称列表
+ */
+export function getEffectiveOperatorCovenants(op, version) {
+  const name = typeof op === "string" ? op : op?.name;
+  const base = getOperatorCovenants(name, version);
+  const extra =
+    typeof op === "string"
+      ? ""
+      : getMorphCovenant(getOperatorEquipmentNames(op), version);
+
+  if (!extra || base.includes(extra)) return base;
+  return [...base, extra];
 }
 
 /**

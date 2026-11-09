@@ -75,8 +75,33 @@
           </button>
         </div>
         <span class="name-label">{{ op.name }}</span>
+        <div
+          v-if="hasEquipments"
+          class="equip-slots"
+        >
+          <button
+            v-for="(equip, slot) in displayEquipments(op)"
+            :key="slot"
+            class="equip-slot"
+            :class="{ filled: Boolean(equip) }"
+            :title="equip ? `${equip}（点击更换）` : `槽位 ${slot + 1}：未装备`"
+            @click.stop="openEquipmentPicker(index, slot)"
+          >
+            {{ equip || "＋" }}
+          </button>
+        </div>
       </div>
     </VueDraggable>
+
+    <EquipmentPicker
+      v-if="equipOperator"
+      :show="equipTarget !== null"
+      :operator-name="equipOperator.name"
+      :equipments="equipOperator.equipments || []"
+      :initial-slot="equipSlot"
+      @update:equipments="updateEquipments"
+      @close="closeEquipmentPicker"
+    />
 
     <div
       class="active-effects-wrap"
@@ -121,9 +146,17 @@
   import { ref, computed, toRef } from "vue";
   import { VueDraggable } from "vue-draggable-plus";
   import CovenantsPanel from "./CovenantsPanel.vue";
+  import EquipmentPicker from "./EquipmentPicker.vue";
   import { useCovenantStats } from "@/composables/useCovenantStats.js";
   import { useGameVersion } from "@/composables/useGameVersion.js";
-  import { getOperatorTraits, getOperatorCovenants } from "@/data/versions.js";
+  import {
+    getEffectiveOperatorCovenants,
+    getOperatorTraits,
+  } from "@/data/versions.js";
+  import {
+    EQUIPMENT_SLOT_COUNT,
+    getOperatorEquipmentNames,
+  } from "@/data/equipment.js";
   import {
     showTraitTooltip,
     moveTraitTooltip,
@@ -165,7 +198,47 @@
       op.name,
       getOperatorTraits(op.name, currentVersion.value),
       isOpMissing(op) ? "该干员不在当前版本的干员池中，不提供盟约层数" : "",
-      getOperatorCovenants(op.name, currentVersion.value),
+      getEffectiveOperatorCovenants(op, currentVersion.value),
+    );
+  };
+
+  /** 当前版本是否有装备数据 */
+  const hasEquipments = computed(
+    () => Object.keys(currentVersion.value.equipments || {}).length > 0,
+  );
+
+  /** 装备选择器：目标干员下标与当前槽位 */
+  const equipTarget = ref(null);
+  const equipSlot = ref(0);
+
+  const equipOperator = computed(() =>
+    equipTarget.value === null ? null : props.team?.[equipTarget.value],
+  );
+
+  /** 展示用装备槽：不足两个时补空槽 */
+  const displayEquipments = (op) => {
+    const names = getOperatorEquipmentNames(op);
+    while (names.length < EQUIPMENT_SLOT_COUNT) names.push("");
+    return names;
+  };
+
+  const openEquipmentPicker = (index, slot) => {
+    equipTarget.value = index;
+    equipSlot.value = slot;
+    hideTraitTooltip();
+  };
+
+  const closeEquipmentPicker = () => {
+    equipTarget.value = null;
+  };
+
+  /** 更新某个干员的装备（写回整个编队由父组件处理） */
+  const updateEquipments = (names) => {
+    const index = equipTarget.value;
+    if (index === null) return;
+    emit(
+      "update:team",
+      props.team.map((op, i) => (i === index ? { ...op, equipments: names } : op)),
     );
   };
 
@@ -357,6 +430,41 @@
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+  }
+
+  .equip-slots {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 3px;
+  }
+
+  .equip-slot {
+    width: 100%;
+    padding: 1px 3px;
+    font-size: 9px;
+    line-height: 1.4;
+    color: #666;
+    background: #1f1f1f;
+    border: 1px dashed #3d3d3d;
+    border-radius: 3px;
+    cursor: pointer;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    transition: 0.15s;
+  }
+
+  .equip-slot.filled {
+    color: #d3e2c8;
+    background: #22301f;
+    border-style: solid;
+    border-color: #4c6b3f;
+  }
+
+  .equip-slot:hover {
+    border-color: #ffcf00;
+    color: #ffcf00;
   }
 
   .active-effects-wrap {

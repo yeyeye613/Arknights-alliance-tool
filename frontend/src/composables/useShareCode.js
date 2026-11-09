@@ -100,6 +100,8 @@ export function useShareCode() {
       .map((entry, idx) => {
         const name = typeof entry === "string" ? entry : entry?.n;
         const tier = typeof entry === "object" ? entry?.t : "";
+        const equipments =
+          typeof entry === "object" && Array.isArray(entry?.e) ? entry.e : [];
         const isSelfOperator =
           typeof entry === "object"
             ? Boolean(entry?.s)
@@ -116,6 +118,7 @@ export function useShareCode() {
           avatar: getAvatarUrl(name),
           tier: tier || undefined,
           isSelfOperator,
+          ...(equipments.length ? { equipments } : {}),
         };
       })
       .filter((op) => op !== null);

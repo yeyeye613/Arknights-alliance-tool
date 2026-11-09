@@ -16,11 +16,14 @@
  */
 import pako from "pako";
 import codebook from "@/data/opCodebook.json";
+import equipCodebook from "@/data/equipCodebook.json";
 
 /** 协议前缀（v3 使用单字符，v1/v2 的 ARKTEAM / ARKCOL / ARKFULL 优先匹配） */
 export const CODE_PREFIX = "A";
 
 const MAGIC = 0xc0;
+/** 带装备字段的分享码用不同 magic，旧版本解码器会直接判为无效而不是错读 */
+const MAGIC_EQUIP = 0xd0;
 const TYPE_TEAM = 1;
 const TYPE_COLLECTION = 2;
 const TYPE_FULL = 3;
@@ -42,6 +45,10 @@ const ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
 
 /** 干员名 → 码表下标 */
 const NAME_TO_INDEX = new Map(codebook.map((name, index) => [name, index]));
+/** 装备名 → 码表下标 */
+const EQUIP_TO_INDEX = new Map(
+  equipCodebook.map((name, index) => [name, index]),
+);
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -139,9 +146,10 @@ function fromBase62(text) {
 
 /**
  * @param {Object} out 输出字节缓冲
- * @param {string|Object} op 干员名，或 { name, tier, isSelfOperator }
+ * @param {string|Object} op 干员名，或 { name, tier, isSelfOperator, equipments }
+ * @param {boolean} withEquipment 是否写入装备（决定 0xd0 magic，必须与解码一致）
  */
-function writeOperator(out, op) {
+function writeOperator(out, op, withEquipment) {
   const name = typeof op === "string" ? op : op?.name;
   const tier = typeof op === "object" ? op?.tier || "" : "";
   const isSelf = typeof op === "object" ? Boolean(op?.isSelfOperator) : false;
@@ -160,12 +168,26 @@ function writeOperator(out, op) {
       out.push(tierCode < 0 ? TIER_NONE : tierCode);
     }
   }
+
+  if (withEquipment) {
+    const equipments = (typeof op === "object" ? op?.equipments || [] : []).filter(
+      Boolean,
+    );
+    writeVarint(out, equipments.length);
+    for (const equip of equipments) {
+      const equipIndex = EQUIP_TO_INDEX.get(equip);
+      const equipRef = equipIndex === undefined ? ESCAPE_REF : equipIndex;
+      writeVarint(out, equipRef);
+      if (equipIndex === undefined) writeString(out, equip);
+    }
+  }
 }
 
 /**
+ * @param {boolean} withEquipment
  * @returns {string|Object} 与 v1/v2 的 ops 结构保持一致
  */
-function readOperator(reader) {
+function readOperator(reader, withEquipment) {
   const ref = reader.varint();
   const isSelf = ref % 2 === 1;
   const index = (ref - (isSelf ? 1 : 0)) / 2;
@@ -174,35 +196,52 @@ function readOperator(reader) {
   if (name === undefined) {
     throw new Error("分享码来自更新的版本，请刷新页面后再导入");
   }
-  if (!isSelf) return name;
 
-  const tierCode = reader.byte();
-  const tier =
-    tierCode === TIER_UNKNOWN ? reader.string() : (TIERS[tierCode] ?? "");
-  return tier ? { n: name, t: tier, s: 1 } : { n: name, s: 1 };
+  let entry = name;
+  if (isSelf) {
+    const tierCode = reader.byte();
+    const tier =
+      tierCode === TIER_UNKNOWN ? reader.string() : (TIERS[tierCode] ?? "");
+    entry = tier ? { n: name, t: tier, s: 1 } : { n: name, s: 1 };
+  }
+
+  if (withEquipment) {
+    const count = reader.varint();
+    const equipments = [];
+    for (let i = 0; i < count; i++) {
+      const equipRef = reader.varint();
+      equipments.push(
+        equipRef === ESCAPE_REF ? reader.string() : equipCodebook[equipRef],
+      );
+    }
+    if (typeof entry === "string") entry = { n: entry };
+    entry.e = equipments.filter(Boolean);
+  }
+
+  return entry;
 }
 
 /* ------------------------------ 结构读写 ------------------------------ */
 
-function writeTeam(out, team) {
+function writeTeam(out, team, withEquipment) {
   writeString(out, team?.n || team?.name || "");
   const ops = team?.ops || team?.team || [];
   writeVarint(out, ops.length);
-  for (const op of ops) writeOperator(out, op);
+  for (const op of ops) writeOperator(out, op, withEquipment);
 }
 
-function readTeam(reader) {
+function readTeam(reader, withEquipment) {
   const name = reader.string();
   const count = reader.varint();
   const ops = [];
-  for (let i = 0; i < count; i++) ops.push(readOperator(reader));
+  for (let i = 0; i < count; i++) ops.push(readOperator(reader, withEquipment));
   return { n: name, ops };
 }
 
-function readTeams(reader) {
+function readTeams(reader, withEquipment) {
   const count = reader.varint();
   const teams = [];
-  for (let i = 0; i < count; i++) teams.push(readTeam(reader));
+  for (let i = 0; i < count; i++) teams.push(readTeam(reader, withEquipment));
   return teams;
 }
 
@@ -213,8 +252,8 @@ function versionToByte(versionId) {
 
 /* ------------------------------ 对外编码 ------------------------------ */
 
-function finish(type, body, versionId) {
-  const head = [MAGIC | type, 0];
+function finish(type, body, versionId, withEquipment) {
+  const head = [(withEquipment ? MAGIC_EQUIP : MAGIC) | type, 0];
   const versionByte = versionToByte(versionId);
   if (versionByte !== undefined) {
     head[1] |= FLAG_VERSION;
@@ -234,17 +273,27 @@ function finish(type, body, versionId) {
   return CODE_PREFIX + toBase62(bytes);
 }
 
+/** 是否有干员带装备（决定是否启用 0xd0 格式） */
+function hasAnyEquipment(teams) {
+  return teams.some((team) =>
+    (team?.team || team?.ops || []).some(
+      (op) => typeof op === "object" && op?.equipments?.filter(Boolean).length,
+    ),
+  );
+}
+
 /**
- * @param {Object} team { name, team: [{ name, tier?, isSelfOperator? }] }
+ * @param {Object} team { name, team: [{ name, tier?, isSelfOperator?, equipments? }] }
  * @param {string} [versionId]
  */
 export function encodeTeam(team, versionId) {
   const body = [];
-  writeString(body, team?.name || "");
   const ops = team?.team || team?.ops || [];
+  const withEquipment = hasAnyEquipment([team]);
+  writeString(body, team?.name || "");
   writeVarint(body, ops.length);
-  for (const op of ops) writeOperator(body, op);
-  return finish(TYPE_TEAM, body, versionId);
+  for (const op of ops) writeOperator(body, op, withEquipment);
+  return finish(TYPE_TEAM, body, versionId, withEquipment);
 }
 
 /**
@@ -252,11 +301,12 @@ export function encodeTeam(team, versionId) {
  */
 export function encodeCollection(collection, versionId) {
   const body = [];
-  writeString(body, collection?.name || "");
   const teams = collection?.teams || [];
+  const withEquipment = hasAnyEquipment(teams);
+  writeString(body, collection?.name || "");
   writeVarint(body, teams.length);
-  for (const team of teams) writeTeam(body, team);
-  return finish(TYPE_COLLECTION, body, versionId);
+  for (const team of teams) writeTeam(body, team, withEquipment);
+  return finish(TYPE_COLLECTION, body, versionId, withEquipment);
 }
 
 /**
@@ -265,17 +315,23 @@ export function encodeCollection(collection, versionId) {
  */
 export function encodeFull(savedTeams, collections, versionId) {
   const body = [];
+  const allTeams = [
+    ...savedTeams,
+    ...collections.flatMap((collection) => collection?.teams || []),
+  ];
+  const withEquipment = hasAnyEquipment(allTeams);
+
   writeString(body, "");
   writeVarint(body, savedTeams.length);
-  for (const team of savedTeams) writeTeam(body, team);
+  for (const team of savedTeams) writeTeam(body, team, withEquipment);
   writeVarint(body, collections.length);
   for (const collection of collections) {
     writeString(body, collection?.name || "");
     const teams = collection?.teams || [];
     writeVarint(body, teams.length);
-    for (const team of teams) writeTeam(body, team);
+    for (const team of teams) writeTeam(body, team, withEquipment);
   }
-  return finish(TYPE_FULL, body, versionId);
+  return finish(TYPE_FULL, body, versionId, withEquipment);
 }
 
 /* ------------------------------ 对外解码 ------------------------------ */
@@ -297,7 +353,11 @@ export function decodeCompact(code) {
   if (!raw.length) throw new Error("分享码内容为空");
 
   const head = raw[0];
-  if ((head & 0xf0) !== MAGIC) throw new Error("无效的分享码格式");
+  const magic = head & 0xf0;
+  if (magic !== MAGIC && magic !== MAGIC_EQUIP) {
+    throw new Error("无效的分享码格式");
+  }
+  const withEquipment = magic === MAGIC_EQUIP;
   const type = head & 0x0f;
   const flags = raw[1] ?? 0;
 
@@ -321,20 +381,21 @@ export function decodeCompact(code) {
     data.n = reader.string();
     const count = reader.varint();
     data.ops = [];
-    for (let i = 0; i < count; i++) data.ops.push(readOperator(reader));
+    for (let i = 0; i < count; i++)
+      data.ops.push(readOperator(reader, withEquipment));
   } else if (type === TYPE_COLLECTION) {
     data.t = "collection";
     data.n = reader.string();
-    data.teams = readTeams(reader);
+    data.teams = readTeams(reader, withEquipment);
   } else if (type === TYPE_FULL) {
     data.t = "full";
     data.n = reader.string();
-    data.teams = readTeams(reader);
+    data.teams = readTeams(reader, withEquipment);
     const collectionCount = reader.varint();
     data.collections = [];
     for (let i = 0; i < collectionCount; i++) {
       const name = reader.string();
-      data.collections.push({ n: name, teams: readTeams(reader) });
+      data.collections.push({ n: name, teams: readTeams(reader, withEquipment) });
     }
   } else {
     throw new Error("不支持的分享码类型");

@@ -5,8 +5,8 @@
 import { computed, unref } from "vue";
 import {
   getCovenantsByGroup,
+  getEffectiveOperatorCovenants,
   getGameVersion,
-  getOperatorCovenants,
   CORE_GROUP,
 } from "@/data/versions.js";
 import { useGameVersion } from "./useGameVersion.js";
@@ -22,13 +22,15 @@ const HARMONY_COVENANT = "调和";
  */
 function countBaseCovenants(team, version) {
   const stats = {};
+  const seen = new Set();
 
-  // 获取所有干员的名字（去重）
-  const uniqueNames = [...new Set(team.map((op) => op.name))];
+  (team || []).forEach((op) => {
+    const name = typeof op === "string" ? op : op?.name;
+    if (!name || seen.has(name)) return;
+    seen.add(name);
 
-  uniqueNames.forEach((name) => {
-    const operatorCovenants = getOperatorCovenants(name, version);
-    operatorCovenants.forEach((cov) => {
+    // 含装备加成：变形同构体可让携带者额外视为某个盟约成员
+    getEffectiveOperatorCovenants(op, version).forEach((cov) => {
       stats[cov] = (stats[cov] || 0) + 1;
     });
   });
