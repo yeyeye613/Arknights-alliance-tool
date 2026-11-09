@@ -2,36 +2,39 @@
   <section class="my-team">
     <div class="panel-header">
       <h3>当前编队 ({{ team.length }}/{{ teamLimit }})</h3>
-      <div class="limit-setter">
-        <label>上限:</label>
-        <input
-          type="number"
-          v-model.number="teamLimitModel"
-          min="1"
-          max="20"
-          @change="handleLimitChange"
-          class="limit-input"
-          @input="teamLimitModel = Math.max(1, Math.min(20, teamLimitModel))"
-        />
+      <div class="header-actions">
+        <div class="limit-setter">
+          <label>上限:</label>
+          <input
+            type="number"
+            v-model.number="teamLimitModel"
+            min="1"
+            max="20"
+            @change="handleLimitChange"
+            class="limit-input"
+            @input="teamLimitModel = Math.max(1, Math.min(20, teamLimitModel))"
+          />
+        </div>
+        <button
+          @click="emit('save-team')"
+          class="new-team-btn"
+        >
+          保存编队
+        </button>
+        <button
+          @click="clearTeam"
+          class="clear-btn"
+        >
+          清空
+        </button>
       </div>
-      <button
-        @click="emit('save-team')"
-        class="new-team-btn"
-      >
-        保存编队
-      </button>
-      <button
-        @click="clearTeam"
-        class="clear-btn"
-      >
-        清空编队
-      </button>
     </div>
 
     <CovenantsPanel
       :presentCovList="presentCovList"
       :presentCovCounts="presentCovCounts"
       :advanced-cov-levels="advancedCovLevels"
+      :morph-cov-counts="morphCovCounts"
     ></CovenantsPanel>
 
     <p
@@ -51,12 +54,23 @@
         v-for="(op, index) in team"
         :key="index"
         class="op-unit"
-        :class="{ 'op-missing': isOpMissing(op) }"
+        :class="{
+          'op-missing': isOpMissing(op),
+          'drop-ready': dropHint,
+          'drag-over': dragOverIndex === index,
+        }"
         @mouseenter="hoverTraits($event, op)"
         @mousemove="moveTraitTooltip"
         @mouseleave="hideTraitTooltip"
+        @dragenter.prevent="handleDragOver($event, index)"
+        @dragover.prevent="handleDragOver($event, index)"
+        @dragleave="handleDragLeave($event, index)"
+        @drop.prevent="handleDrop($event, index)"
       >
-        <div class="img-container">
+        <div
+          class="img-container"
+          @click="handleOpClick(index)"
+        >
           <img
             :src="op.avatar"
             @error="handleImgError"
@@ -73,25 +87,33 @@
           >
             ×
           </button>
+
+          <!-- 装备角标：只显示已装备的槽位，点击卸下 -->
+          <div
+            v-if="equippedNames(op).length"
+            class="equip-badges"
+          >
+            <span
+              v-for="(equip, slot) in equippedNames(op)"
+              :key="slot"
+              class="equip-badge"
+              :title="`${equip}（点击卸下）`"
+              @click.stop="removeEquipment(index, slot)"
+            >
+              <img
+                :src="getEquipmentIconUrl(equip)"
+                :alt="equip"
+                @error="handleImgError"
+              />
+            </span>
+          </div>
         </div>
         <span class="name-label">{{ op.name }}</span>
-        <div
-          v-if="hasEquipments"
-          class="equip-slots"
-        >
-          <button
-            v-for="(equip, slot) in displayEquipments(op)"
-            :key="slot"
-            class="equip-slot"
-            :class="{ filled: Boolean(equip) }"
-            :title="equip ? `${equip}（点击更换）` : `槽位 ${slot + 1}：未装备`"
-            @click.stop="openEquipmentPicker(index, slot)"
-          >
-            {{ equip || "＋" }}
-          </button>
-        </div>
       </div>
     </VueDraggable>
+
+    <!-- 临时装备池：贴在编队干员正下方，由父组件提供内容 -->
+    <slot name="staging" />
 
     <EquipmentPicker
       v-if="equipOperator"
@@ -155,24 +177,39 @@
   } from "@/data/versions.js";
   import {
     EQUIPMENT_SLOT_COUNT,
+    equipToOperator,
     getOperatorEquipmentNames,
+    removeOperatorEquipment,
   } from "@/data/equipment.js";
+  import {
+    hasEquipmentDrag,
+    readEquipmentDrag,
+  } from "@/composables/useEquipmentDrag.js";
   import {
     showTraitTooltip,
     moveTraitTooltip,
     hideTraitTooltip,
   } from "@/composables/useTraitTooltip.js";
-  import { handleImgError } from "@/utils/index.js";
+  import { getEquipmentIconUrl, handleImgError } from "@/utils/index.js";
 
   const props = defineProps({
     team: Array,
     teamLimit: Number,
+    /** 临时装备池里有装备时，头像显示可放置提示 */
+    dropHint: Boolean,
+    /** 已选中的装备（点选装备后再点干员即可装备） */
+    selectedEquipment: { type: String, default: "" },
   });
 
   const { currentVersion } = useGameVersion();
 
-  const { presentCovList, presentCovCounts, activeCovList, advancedCovLevels } =
-    useCovenantStats(toRef(props, "team"), currentVersion);
+  const {
+    presentCovList,
+    presentCovCounts,
+    activeCovList,
+    advancedCovLevels,
+    morphCovCounts,
+  } = useCovenantStats(toRef(props, "team"), currentVersion);
 
   /**
    * 判断干员是否不属于当前版本干员池（切换版本后可能残留其他版本的干员）
@@ -207,6 +244,19 @@
     () => Object.keys(currentVersion.value.equipments || {}).length > 0,
   );
 
+  const emit = defineEmits([
+    "update:team",
+    "update:teamLimit",
+    "save-team",
+    "clear-team",
+    "remove-from-team",
+    "notify",
+    "equipment-equipped",
+  ]);
+
+  /** 已装备的装备名（最多两个，空槽不占位） */
+  const equippedNames = (op) => getOperatorEquipmentNames(op);
+
   /** 装备选择器：目标干员下标与当前槽位 */
   const equipTarget = ref(null);
   const equipSlot = ref(0);
@@ -215,14 +265,8 @@
     equipTarget.value === null ? null : props.team?.[equipTarget.value],
   );
 
-  /** 展示用装备槽：不足两个时补空槽 */
-  const displayEquipments = (op) => {
-    const names = getOperatorEquipmentNames(op);
-    while (names.length < EQUIPMENT_SLOT_COUNT) names.push("");
-    return names;
-  };
-
   const openEquipmentPicker = (index, slot) => {
+    if (!hasEquipments.value) return;
     equipTarget.value = index;
     equipSlot.value = slot;
     hideTraitTooltip();
@@ -242,13 +286,90 @@
     );
   };
 
-  const emit = defineEmits([
-    "update:team",
-    "update:teamLimit",
-    "save-team",
-    "clear-team",
-    "remove-from-team",
-  ]);
+  /* ------------------------------ 装备拖拽 / 点选 ------------------------------ */
+
+  /** 当前拖拽悬停的干员下标，仅用于高亮 */
+  const dragOverIndex = ref(null);
+
+  const handleDragOver = (event, index) => {
+    // 只有装备拖拽才显示放置高亮；干员排序拖拽交给 Sortable 自己处理
+    if (!hasEquipmentDrag(event)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    dragOverIndex.value = index;
+  };
+
+  const handleDragLeave = (event, index) => {
+    // 在头像内部移动（进入 img / 角标）也会触发 dragleave，忽略这种情况
+    const related = event?.relatedTarget;
+    if (related && event.currentTarget?.contains?.(related)) return;
+    if (dragOverIndex.value === index) {
+      dragOverIndex.value = null;
+    }
+  };
+
+  /** 把装备装到指定干员身上，失败时给出具体原因 */
+  const applyEquipment = (index, name, source = "pool") => {
+    const op = props.team?.[index];
+    if (!op || !name) return;
+
+    const result = equipToOperator(op, name);
+    if (!result.ok) {
+      const message =
+        result.reason === "duplicated"
+          ? `${op.name} 已经装备了「${name}」`
+          : `${op.name} 的装备槽已满（${EQUIPMENT_SLOT_COUNT} 件），点击头像左下角标可卸下`;
+      emit("notify", message);
+      return;
+    }
+
+    emit(
+      "update:team",
+      props.team.map((item, i) =>
+        i === index ? { ...item, equipments: result.equipments } : item,
+      ),
+    );
+    emit("equipment-equipped", {
+      name,
+      source,
+      operatorName: op.name,
+    });
+    emit("notify", `已为 ${op.name} 装备「${name}」`);
+  };
+
+  const handleDrop = (event, index) => {
+    dragOverIndex.value = null;
+    const payload = readEquipmentDrag(event);
+    if (!payload) return;
+    applyEquipment(index, payload.name, payload.from);
+  };
+
+  /** 点击头像：有选中装备时直接装上，否则打开装备选择器 */
+  const handleOpClick = (index) => {
+    if (props.selectedEquipment) {
+      applyEquipment(index, props.selectedEquipment, "staging");
+      return;
+    }
+    openEquipmentPicker(index, 0);
+  };
+
+  /** 点击角标卸下对应装备 */
+  const removeEquipment = (index, slot) => {
+    const op = props.team?.[index];
+    if (!op) return;
+    const name = getOperatorEquipmentNames(op)[slot];
+    if (!name) return;
+
+    emit(
+      "update:team",
+      props.team.map((item, i) =>
+        i === index
+          ? { ...item, equipments: removeOperatorEquipment(item, slot) }
+          : item,
+      ),
+    );
+    emit("notify", `已卸下「${name}」`);
+  };
 
   const isEffectsExpanded = ref(false);
 
@@ -287,14 +408,22 @@
 
   .panel-header {
     display: flex;
-    justify-content: space-around;
     align-items: center;
-    padding: 20px;
+    gap: 10px;
+    padding: 2px 2px 0;
   }
 
   .panel-header h3 {
     margin: 0;
     font-size: 16px;
+    white-space: nowrap;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
   }
 
   .limit-setter {
@@ -351,23 +480,27 @@
   .drag-area {
     display: flex;
     flex-wrap: wrap;
-    gap: 15px;
-    padding: 15px;
+    gap: 14px 10px;
+    padding: 16px;
     background: #181818;
     border: 1px solid #333;
     min-height: 100px;
-    max-height: 80vh;
     align-content: flex-start;
   }
 
+  /* 编队一般 8~9 人：整体居中，横竖都对称，数量变化不破坏排版；
+     8 人 = 8×78 + 7×10 = 694px，1366×768 下编队列内宽 ~718px 刚好一行 */
   .team-grid {
     border: 2px dashed #444;
-    align-content: flex-start;
+    justify-content: center;
+    align-content: center;
+    min-height: 232px;
+    max-height: none;
   }
 
   .op-unit {
     position: relative;
-    width: 75px;
+    width: 78px;
     text-align: center;
     cursor: pointer;
   }
@@ -432,39 +565,74 @@
     text-overflow: ellipsis;
   }
 
-  .equip-slots {
+  .equip-badges {
+    position: absolute;
+    left: 3px;
+    bottom: 3px;
     display: flex;
-    flex-direction: column;
     gap: 2px;
-    margin-top: 3px;
+    pointer-events: none;
   }
 
-  .equip-slot {
-    width: 100%;
-    padding: 1px 3px;
-    font-size: 9px;
-    line-height: 1.4;
-    color: #666;
-    background: #1f1f1f;
-    border: 1px dashed #3d3d3d;
-    border-radius: 3px;
+  .equip-badge {
+    position: relative;
+    width: 20px;
+    height: 20px;
+    padding: 1px;
+    box-sizing: border-box;
+    background: rgba(10, 10, 10, 0.85);
+    border: 1px solid #4c6b3f;
+    border-radius: 4px;
     cursor: pointer;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    transition: 0.15s;
+    pointer-events: auto;
+    transition:
+      border-color 0.15s,
+      transform 0.15s;
   }
 
-  .equip-slot.filled {
-    color: #d3e2c8;
-    background: #22301f;
-    border-style: solid;
-    border-color: #4c6b3f;
+  .equip-badge img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    border-radius: 2px;
+    background: #111;
   }
 
-  .equip-slot:hover {
-    border-color: #ffcf00;
-    color: #ffcf00;
+  .equip-badge:hover {
+    border-color: #ff4d4f;
+    transform: translateY(-1px);
+  }
+
+  .equip-badge:hover::after {
+    content: "×";
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(20, 0, 0, 0.6);
+    color: #ff8a8a;
+    font-size: 13px;
+    font-weight: bold;
+    line-height: 1;
+    border-radius: 3px;
+  }
+
+  /* 临时装备池有货时，头像提示可放置 */
+  .op-unit.drop-ready .img-container img {
+    outline: 1px dashed rgba(143, 224, 205, 0.65);
+    outline-offset: -1px;
+  }
+
+  .op-unit.drag-over .img-container img {
+    outline: 2px solid #8fe0cd;
+    outline-offset: -2px;
+    box-shadow: 0 0 10px rgba(143, 224, 205, 0.45);
+  }
+
+  .op-unit.drag-over .name-label {
+    color: #8fe0cd;
   }
 
   .active-effects-wrap {
@@ -591,6 +759,17 @@
     .name-label {
       font-size: 11px;
       margin-top: 4px;
+    }
+
+    .equip-badge {
+      width: 22px;
+      height: 22px;
+    }
+
+    .equip-badges {
+      left: 2px;
+      bottom: 2px;
+      gap: 3px;
     }
 
     .remove-btn {

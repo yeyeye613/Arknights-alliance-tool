@@ -56,6 +56,9 @@
               </div>
               <div class="preview-team-stats">
                 干员数量: {{ previewData.team.length }}
+                <template v-if="teamEquipmentCount > 0">
+                  · 装备 {{ teamEquipmentCount }} 件
+                </template>
               </div>
             </div>
 
@@ -106,7 +109,7 @@
 </template>
 
 <script setup>
-  import { ref, nextTick, watch } from "vue";
+  import { ref, computed, nextTick, watch } from "vue";
   import BaseModal from "./BaseModal.vue";
 
   const props = defineProps({
@@ -121,6 +124,14 @@
 
   const copied = ref(false);
   const codeInput = ref(null);
+
+  /** 预览里提示分享码已经带上干员装备 */
+  const teamEquipmentCount = computed(() =>
+    (props.previewData?.team || []).reduce(
+      (total, op) => total + (op?.equipments?.filter(Boolean).length || 0),
+      0,
+    ),
+  );
 
   watch(
     () => props.show,

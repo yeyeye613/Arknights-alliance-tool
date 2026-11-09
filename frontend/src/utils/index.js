@@ -24,3 +24,13 @@ export const getIconUrl = (name) => {
 export const getAvatarUrl = (name) => {
   return `${import.meta.env.BASE_URL}resource/image/头像_${name}.png`;
 };
+
+/**
+ * 获取装备图标地址
+ * 命名与头像 / 盟约保持一致：装备_<装备名>.png
+ * @param {string} name - 装备名称
+ * @returns {string} 图标完整路径
+ */
+export const getEquipmentIconUrl = (name) => {
+  return `${import.meta.env.BASE_URL}resource/image/装备_${name}.png`;
+};

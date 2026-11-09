@@ -23,9 +23,9 @@
         <div class="tab-list">
           <div
             class="tab-item"
-            v-for="(tab, key) in TABS"
-            :key="key"
-            :class="{ active: currentTab === key }"
+            v-for="tab in visibleTabs"
+            :key="tab.key"
+            :class="{ active: currentTab === tab.key }"
             @click="currentTab = tab.key"
           >
             {{ tab.label }}
@@ -33,8 +33,16 @@
         </div>
 
         <PoolPanel
-          v-if="currentTab === TABS.POOL.key"
+          v-if="isPoolTab"
           @add-to-team="addToTeam"
+        />
+
+        <!-- 装备池：独立标签页，点击「装备池」切到这里 -->
+        <EquipmentPool
+          v-if="isEquipTab"
+          class="equip-page"
+          :staged="stagedEquipments"
+          @stage="stageEquipment"
         />
 
         <SavedTeamsPanel
@@ -52,15 +60,33 @@
         />
       </div>
 
-      <TeamPanel
-        :team="team"
-        :team-limit="teamLimit"
-        @update:team="team = $event"
-        @update:team-limit="updateTeamLimit"
-        @save-team="openSaveTeamModalWrapper"
-        @clear-team="team = []"
-        @remove-from-team="removeFromTeam"
-      />
+      <div class="team-col">
+        <TeamPanel
+          :team="team"
+          :team-limit="teamLimit"
+          :drop-hint="hasEquipmentPool && stagedEquipments.length > 0"
+          :selected-equipment="selectedEquipment"
+          @update:team="team = $event"
+          @update:team-limit="updateTeamLimit"
+          @save-team="openSaveTeamModalWrapper"
+          @clear-team="team = []"
+          @remove-from-team="removeFromTeam"
+          @notify="showTempMessage"
+          @equipment-equipped="handleEquipmentEquipped"
+        >
+          <!-- 临时装备池：贴在编队干员正下方，没有装备时不出现 -->
+          <template #staging>
+            <EquipmentStaging
+              v-if="hasEquipmentPool && stagedEquipments.length > 0"
+              :items="stagedEquipments"
+              :selected="selectedEquipment"
+              @select="selectEquipment"
+              @remove="unstageEquipment"
+              @clear="clearStagedEquipments"
+            />
+          </template>
+        </TeamPanel>
+      </div>
     </main>
 
     <SaveTeamModal
@@ -118,9 +144,11 @@
 </template>
 
 <script setup>
-  import { ref, onMounted } from "vue";
+  import { computed, ref, onMounted, watch } from "vue";
 
   import PoolPanel from "./components/PoolPanel.vue";
+  import EquipmentPool from "./components/EquipmentPool.vue";
+  import EquipmentStaging from "./components/EquipmentStaging.vue";
   import TeamPanel from "./components/TeamPanel.vue";
   import SavedTeamsPanel from "./components/SavedTeamsPanel.vue";
   import SaveTeamModal from "./components/SaveTeamModal.vue";
@@ -137,6 +165,7 @@
   import { useModalState } from "@/composables/useModalState.js";
   import { useGameVersion } from "@/composables/useGameVersion.js";
   import { DEFAULT_VERSION_ID, getGameVersion } from "@/data/versions.js";
+  import { hasEquipmentPool as versionHasEquipmentPool } from "@/data/equipment.js";
 
   // 游戏版本
   const { currentVersion, currentVersionId, setVersion } = useGameVersion();
@@ -144,9 +173,76 @@
   // 标签页常量
   const TABS = {
     POOL: { key: "pool", label: "干员池" },
+    EQUIP: { key: "equip", label: "装备池" },
     TEAM: { key: "team", label: "我的编队" },
   };
   const currentTab = ref(TABS.POOL.key);
+  const isPoolTab = computed(() => currentTab.value === TABS.POOL.key);
+  const isEquipTab = computed(() => currentTab.value === TABS.EQUIP.key);
+
+  /* ------------------------------ 装备池 / 临时装备池 ------------------------------ */
+
+  /** 当前版本是否提供装备（盟约版没有） */
+  const hasEquipmentPool = computed(() =>
+    versionHasEquipmentPool(currentVersion.value),
+  );
+
+  /** 没有装备数据的版本不显示「装备池」标签 */
+  const visibleTabs = computed(() =>
+    Object.values(TABS).filter(
+      (tab) => tab.key !== TABS.EQUIP.key || hasEquipmentPool.value,
+    ),
+  );
+
+  /** 点击装备后暂存的装备名，等待拖到编队干员身上 */
+  const stagedEquipments = ref([]);
+  /** 当前选中的装备（点选后再点干员即可装备，触屏友好） */
+  const selectedEquipment = ref("");
+
+  const stageEquipment = (name) => {
+    if (!name) return;
+    if (!stagedEquipments.value.includes(name)) {
+      stagedEquipments.value = [...stagedEquipments.value, name];
+    }
+    selectedEquipment.value = name;
+    showTempMessage(`「${name}」已放入临时装备池，拖到干员头像上装备`);
+  };
+
+  const selectEquipment = (name) => {
+    selectedEquipment.value = selectedEquipment.value === name ? "" : name;
+  };
+
+  const unstageEquipment = (name) => {
+    stagedEquipments.value = stagedEquipments.value.filter(
+      (item) => item !== name,
+    );
+    if (selectedEquipment.value === name) {
+      selectedEquipment.value = "";
+    }
+  };
+
+  const clearStagedEquipments = () => {
+    stagedEquipments.value = [];
+    selectedEquipment.value = "";
+  };
+
+  /** 装备成功后，把临时装备池里的同一件消耗掉 */
+  const handleEquipmentEquipped = ({ name, source }) => {
+    if (source === "staging") {
+      unstageEquipment(name);
+    }
+    if (selectedEquipment.value === name) {
+      selectedEquipment.value = "";
+    }
+  };
+
+  // 切到没有装备数据的版本时清空临时装备池，并退回干员池标签
+  watch(currentVersionId, () => {
+    if (!hasEquipmentPool.value) {
+      clearStagedEquipments();
+      if (isEquipTab.value) currentTab.value = TABS.POOL.key;
+    }
+  });
 
   // 团队限制
   const teamLimit = ref(8);
@@ -320,8 +416,11 @@
   .arknights-tool {
     background: #121212;
     color: #eee;
-    min-height: 95vh;
-    padding: 20px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 14px 20px 14px;
     font-family: var(--sans, system-ui, sans-serif);
   }
 
@@ -331,13 +430,18 @@
     align-items: center;
     gap: 16px;
     flex-wrap: wrap;
-    padding: 0 4px 14px;
+    flex: 0 0 auto;
+    padding: 0 4px 10px;
   }
 
   .app-title h1 {
     margin: 0;
-    font-size: 20px;
+    font-size: 18px;
     letter-spacing: 1px;
+  }
+
+  .app-title .app-subtitle {
+    margin-top: 2px;
   }
 
   .app-subtitle {
@@ -362,27 +466,59 @@
 
   .container {
     display: flex;
-    gap: 30px;
-    height: calc(92vh - 70px);
+    gap: 16px;
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   .side-bar {
     display: flex;
     flex-direction: column;
+    /* 期望 560px、保底 420px：窗口不够时编队列先缩，操作区永远可用 */
+    flex: 1 1 560px;
+    min-width: 420px;
+    min-height: 0;
+    gap: 12px;
+    overflow-y: auto;
+  }
+
+  /* 右侧：编队 + 临时装备池 */
+  .team-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    /* 期望 800px（8 人一行 + 16 盟约图标），可被压缩折行，绝不挤压操作区 */
+    flex: 0 1 800px;
     min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .team-col > .my-team {
+    min-height: 0;
+    /* 列内滚动时不要拉伸出一截空白 */
+    flex: 0 0 auto;
+  }
+
+  /* 装备池作为独立页面时占满侧栏高度 */
+  .equip-page {
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   .tab-list {
     display: flex;
-    justify-content: space-around;
-    padding: 20px;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 0 0 8px;
     font-family: var(--sans, system-ui, sans-serif);
   }
 
   .tab-item {
     cursor: pointer;
-    padding: 8px 12px;
+    padding: 7px 16px;
     border-radius: 6px;
+    font-size: 14px;
     transition: background 0.2s;
   }
 
@@ -428,15 +564,28 @@
   }
 
   @media (max-width: 1024px) {
+    /* 平板/手机恢复整页滚动 */
+    .arknights-tool {
+      height: auto;
+      overflow: visible;
+    }
+
     .container {
       flex-direction: column;
-      height: auto;
       min-height: 0;
       gap: 16px;
     }
 
     .side-bar {
+      flex: none;
       width: 100%;
+      overflow: visible;
+    }
+
+    .team-col {
+      flex: none;
+      width: 100%;
+      overflow: visible;
     }
   }
 
@@ -465,6 +614,11 @@
 
     .container {
       gap: 12px;
+    }
+
+    /* 小屏改为上下排列：编队在上，临时装备池在下 */
+    .team-col {
+      gap: 8px;
     }
 
     .tab-list {

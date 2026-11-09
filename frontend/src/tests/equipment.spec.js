@@ -123,14 +123,20 @@ describe("装备选择器", () => {
     setVersion("guicheng");
   });
 
-  it("should render two slots on each operator card", () => {
+  it("should only render badges for equipped slots", async () => {
     const wrapper = mount(TeamPanel, {
       props: {
         team: [{ id: 0, name: "卡达", avatar: "" }],
         teamLimit: 8,
       },
     });
-    expect(wrapper.findAll(".op-unit .equip-slot")).toHaveLength(2);
+    // 未装备时不显示槽位
+    expect(wrapper.findAll(".equip-badge")).toHaveLength(0);
+
+    await wrapper.setProps({
+      team: [{ id: 0, name: "卡达", avatar: "", equipments: ["坚守盾牌"] }],
+    });
+    expect(wrapper.findAll(".equip-badge")).toHaveLength(1);
   });
 
   const mountPicker = (equipments = [], initialSlot = 0) =>

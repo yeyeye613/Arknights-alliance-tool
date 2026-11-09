@@ -105,3 +105,41 @@ export function getCombinedEquipments(equipNames, version) {
     .filter((item) => item.parts && item.parts.every((part) => names.includes(part)))
     .map(({ name, parts }) => ({ name, parts }));
 }
+
+/**
+ * 当前版本是否有装备池（盟约版没有，界面据此隐藏装备相关区域）
+ * @param {Object} version - 版本数据
+ * @returns {boolean}
+ */
+export function hasEquipmentPool(version) {
+  return Object.keys(getEquipments(version)).length > 0;
+}
+
+/**
+ * 给干员穿装备：校验重复与槽位上限
+ * @param {Object} op - 编队干员 { equipments? }
+ * @param {string} name - 装备名
+ * @returns {{ok:boolean, reason?:string, equipments?:Array<string>}}
+ */
+export function equipToOperator(op, name) {
+  if (!name) return { ok: false, reason: "empty" };
+
+  const current = getOperatorEquipmentNames(op);
+  if (current.includes(name)) {
+    return { ok: false, reason: "duplicated" };
+  }
+  if (current.length >= EQUIPMENT_SLOT_COUNT) {
+    return { ok: false, reason: "full" };
+  }
+  return { ok: true, equipments: [...current, name] };
+}
+
+/**
+ * 卸下指定槽位的装备
+ * @param {Object} op - 编队干员 { equipments? }
+ * @param {number} slot - 槽位下标
+ * @returns {Array<string>} 卸下后的装备名列表
+ */
+export function removeOperatorEquipment(op, slot) {
+  return getOperatorEquipmentNames(op).filter((_, index) => index !== slot);
+}

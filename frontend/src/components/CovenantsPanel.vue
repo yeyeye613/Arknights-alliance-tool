@@ -26,6 +26,12 @@
           @error="handleImgError"
         />
         <span class="badge">{{ presentCovCounts[name] }}</span>
+        <span
+          v-if="morphCovCounts && morphCovCounts[name]"
+          class="morph-tag"
+          :title="`其中 ${morphCovCounts[name]} 名来自变形同构体`"
+          >变</span
+        >
       </div>
       <span class="cov-name">{{ name }}</span>
     </div>
@@ -65,6 +71,11 @@
       type: Object,
       required: true,
     },
+    /** 其中由变形同构体贡献的人数：{ 盟约名: 人数 } */
+    morphCovCounts: {
+      type: Object,
+      default: () => ({}),
+    },
   });
 
   /** 悬停编队盟约栏：附带当前编队人数与进阶等级，便于对照效果 */
@@ -72,19 +83,21 @@
     showCovenantTooltip(event, name, {
       presentCount: props.presentCovCounts?.[name] ?? 0,
       advanced: props.advancedCovLevels?.[name] || 0,
+      morphCount: props.morphCovCounts?.[name] || 0,
     });
   };
 </script>
 <style>
-  /* 盟约展示栏 */
+  /* 盟约展示栏：与下方编队网格一样居中排布 */
   .covenant-bar {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    justify-content: center;
+    gap: 8px 6px;
     background: #1a1a1a;
-    padding: 15px;
+    padding: 10px 12px;
     border: 1px solid #333;
-    margin-bottom: 15px;
+    margin-bottom: 0;
   }
 
   .cov-item {
@@ -92,7 +105,7 @@
     filter: grayscale(1);
     transition: 0.3s;
     text-align: center;
-    width: 54px;
+    width: 48px;
     cursor: help;
   }
 
@@ -109,8 +122,8 @@
 
   .icon-wrapper {
     position: relative;
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     margin: 0 auto;
     border-radius: 8px;
     display: flex;
@@ -119,8 +132,8 @@
   }
 
   .single-icon {
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     object-fit: contain;
   }
 
@@ -152,6 +165,26 @@
     padding: 0 4px;
     border-radius: 2px;
     font-weight: bold;
+  }
+
+  /* 变形同构体加成标记 */
+  .morph-tag {
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 3px;
+    box-sizing: border-box;
+    background: #1d3b35;
+    border: 1px solid #4c8f7e;
+    border-radius: 7px;
+    color: #8fe0cd;
+    font-size: 9px;
+    line-height: 12px;
+    text-align: center;
+    font-weight: bold;
+    cursor: help;
   }
 
   .cov-name {

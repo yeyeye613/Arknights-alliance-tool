@@ -9,6 +9,10 @@ import {
   getGameVersion,
   CORE_GROUP,
 } from "@/data/versions.js";
+import {
+  getMorphCovenant,
+  getOperatorEquipmentNames,
+} from "@/data/equipment.js";
 import { useGameVersion } from "./useGameVersion.js";
 
 /** 调和类盟约会为核心盟约额外 +1 人数 */
@@ -33,6 +37,34 @@ function countBaseCovenants(team, version) {
     getEffectiveOperatorCovenants(op, version).forEach((cov) => {
       stats[cov] = (stats[cov] || 0) + 1;
     });
+  });
+
+  return stats;
+}
+
+/**
+ * 统计「变形同构体」为各盟约额外贡献的人数
+ * 用于界面上标出该盟约的人数里有多少来自装备，避免误以为装备没生效
+ * @param {Array} team - 编队数组
+ * @param {Object} version - 当前版本数据
+ * @returns {Object} 盟约名称 -> 由装备加成的人数
+ */
+function countMorphCovenants(team, version) {
+  const stats = {};
+  const seen = new Set();
+
+  (team || []).forEach((op) => {
+    const name = typeof op === "string" ? op : op?.name;
+    if (!name || seen.has(name)) return;
+    seen.add(name);
+
+    const covenant = getMorphCovenant(
+      getOperatorEquipmentNames(op),
+      version,
+    );
+    if (covenant) {
+      stats[covenant] = (stats[covenant] || 0) + 1;
+    }
   });
 
   return stats;
@@ -162,6 +194,11 @@ export function useCovenantStats(teamRef, versionSource) {
     countBaseCovenants(teamRef.value, version.value),
   );
 
+  // 其中由「变形同构体」带来的额外人数，仅用于界面标注
+  const morphCovCounts = computed(() =>
+    countMorphCovenants(teamRef.value, version.value),
+  );
+
   // 盟约统计（已应用调和加成）
   const presentCovCounts = computed(() =>
     applyHarmonyBonus(baseCovCounts.value, covenants.value),
@@ -190,5 +227,6 @@ export function useCovenantStats(teamRef, versionSource) {
     presentCovList, // 出现的盟约名称（排序后）
     activeCovList, // 激活的盟约 详情
     advancedCovLevels,
+    morphCovCounts, // 变形同构体为各盟约贡献的人数
   };
 }

@@ -1245,7 +1245,10 @@
 
   /* 拖拽区与网格 */
   .operator-pool {
-    width: 30vw;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    width: 100%;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -1300,6 +1303,7 @@
   .scrollable {
     overflow-y: auto;
     flex: 1;
+    min-height: 0;
   }
 
   .add-btn {

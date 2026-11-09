@@ -20,6 +20,30 @@
   box-sizing: border-box;
 }
 
+/* 细滚动条：内部滚动区域尽量低调，桌面端不再出现粗黑的默认滚动条 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3a3a3a transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4d4d4d;
+}
+
 html,
 body {
   margin: 0;

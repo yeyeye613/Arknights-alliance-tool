@@ -15,6 +15,8 @@ const state = reactive({
   presentCount: null,
   /** 当前编队中该盟约的进阶等级（0 表示未进阶） */
   advanced: 0,
+  /** 当前编队中由「变形同构体」贡献的人数 */
+  morphCount: 0,
 });
 
 const TOOLTIP_WIDTH = 300;
@@ -64,6 +66,7 @@ function updatePosition(event) {
  * @param {Object} [extra] - 附加信息
  * @param {number|null} [extra.presentCount] - 当前编队中的同名干员数量
  * @param {number} [extra.advanced] - 当前进阶等级
+ * @param {number} [extra.morphCount] - 其中由变形同构体贡献的人数
  */
 export function showCovenantTooltip(event, name, extra = {}) {
   if (!name) {
@@ -73,6 +76,7 @@ export function showCovenantTooltip(event, name, extra = {}) {
   state.presentCount =
     typeof extra.presentCount === "number" ? extra.presentCount : null;
   state.advanced = extra.advanced || 0;
+  state.morphCount = extra.morphCount || 0;
   state.visible = true;
   updatePosition(event);
 

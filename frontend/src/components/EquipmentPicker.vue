@@ -126,6 +126,7 @@
   import { computed, ref, watch } from "vue";
   import BaseModal from "./BaseModal.vue";
   import { useGameVersion } from "@/composables/useGameVersion.js";
+  import { getOperatorCovenants } from "@/data/versions.js";
   import {
     EQUIPMENT_SLOT_COUNT,
     MORPH_EQUIPMENT,
@@ -197,6 +198,14 @@
   const morphHint = computed(() => {
     if (!props.equipments?.includes(MORPH_EQUIPMENT)) return "";
     if (morphCovenant.value) {
+      // 干员本来就在该盟约里时不会重复计数，这里说明清楚，避免误以为装备没生效
+      const already = getOperatorCovenants(
+        props.operatorName,
+        currentVersion.value,
+      ).includes(morphCovenant.value);
+      if (already) {
+        return `变形同构体：${props.operatorName} 已属于【${morphCovenant.value}】，不会重复计入`;
+      }
       return `变形同构体生效：视为【${morphCovenant.value}】盟约成员`;
     }
     return "变形同构体：再配一件带盟约的装备即可生效（如坚守盾牌、炎国短刀）";

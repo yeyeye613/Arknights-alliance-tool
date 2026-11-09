@@ -33,6 +33,12 @@
           class="meta-item advanced"
           >进阶 Lv.{{ state.advanced }}</span
         >
+        <span
+          v-if="state.morphCount > 0"
+          class="meta-item morph"
+          title="变形同构体提供的额外盟约成员"
+          >变形同构体 +{{ state.morphCount }}</span
+        >
       </div>
 
       <div
@@ -188,6 +194,10 @@
 
   .meta-item.advanced {
     color: #c0a6ff;
+  }
+
+  .meta-item.morph {
+    color: #7fd6c2;
   }
 
   .effect-item + .effect-item {

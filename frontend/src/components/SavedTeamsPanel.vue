@@ -303,10 +303,6 @@
 </script>
 
 <style scoped>
-  .panel-content {
-    width: 30vw;
-  }
-
   .saved-teams-header {
     display: flex;
     justify-content: space-between;
@@ -471,7 +467,6 @@
     padding: 40px;
     color: #888;
   }
-
 
   @media (max-width: 1024px) {
     .panel-content {
