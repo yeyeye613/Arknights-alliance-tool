@@ -1,5 +1,20 @@
 import { describe, it, expect } from "vitest";
+import pako from "pako";
 import { useShareCode } from "../composables/useShareCode";
+import { getCodebook } from "../utils/shareCodec";
+
+/** 造一个真实长度的编队：12 名干员 + 4 个汉字的队名 */
+function makeTeam(name = "测试编队") {
+  const names = getCodebook().slice(0, 12);
+  return {
+    name,
+    team: names.map((opName, index) => ({
+      id: index,
+      name: opName,
+      avatar: "a",
+    })),
+  };
+}
 
 describe("useShareCode composable", () => {
   const {
@@ -16,10 +31,10 @@ describe("useShareCode composable", () => {
       team: [{ id: 1, name: "干员1", avatar: "a" }],
     };
     const code = generateTeamCode(teamData);
-    expect(code.startsWith("ARKTEAM")).toBe(true);
+    expect(code.startsWith("A")).toBe(true);
 
     const data = parseCode(code);
-    expect(data.v).toBe(2);
+    expect(data.v).toBe(3);
     expect(data.t).toBe("team");
     expect(data.n).toBe("测试队");
     expect(data.ops).toEqual(["干员1"]);
@@ -31,14 +46,76 @@ describe("useShareCode composable", () => {
       teams: [{ name: "队1", team: [{ id: 1, name: "干员1", avatar: "a" }] }],
     };
     const code = generateCollectionCode(collection);
-    expect(code.startsWith("ARKCOL")).toBe(true);
+    expect(code.startsWith("A")).toBe(true);
 
     const data = parseCode(code);
-    expect(data.v).toBe(2);
+    expect(data.v).toBe(3);
     expect(data.t).toBe("collection");
     expect(data.n).toBe("合集");
     expect(data.teams[0].n).toBe("队1");
     expect(data.teams[0].ops).toEqual(["干员1"]);
+  });
+
+  it("should keep a 12-operator team under 60 characters", () => {
+    const team = makeTeam();
+    const code = generateTeamCode(team);
+    expect(code.length).toBeLessThan(60);
+
+    const parsed = parseCode(code);
+    expect(parsed.ops).toEqual(team.team.map((op) => op.name));
+  });
+
+  it("should keep collection codes much shorter than the legacy format", () => {
+    const collection = {
+      name: "合集",
+      teams: Array.from({ length: 6 }, (_, i) => ({
+        ...makeTeam(`编队${i + 1}`),
+      })),
+    };
+    const code = generateCollectionCode(collection);
+    const legacy = `ARKCOL${btoa(
+      String.fromCharCode(
+        ...pako.deflate(
+          JSON.stringify({
+            v: 2,
+            t: "collection",
+            n: collection.name,
+            teams: collection.teams.map((t) => ({
+              n: t.name,
+              ops: t.team.map((op) => ({ n: op.name, t: "", s: 0 })),
+            })),
+          }),
+          { level: 9 },
+        ),
+      ),
+    )}`;
+
+    expect(code.length).toBeLessThan(legacy.length / 2);
+    expect(parseCode(code).teams).toHaveLength(6);
+  });
+
+  it("should tolerate whitespace inside pasted codes", () => {
+    const code = generateTeamCode(makeTeam());
+    const wrapped = `${code.slice(0, 20)}\n  ${code.slice(20)}`;
+    expect(parseCode(wrapped).ops).toHaveLength(12);
+  });
+
+  it("should still decode legacy ARKTEAM codes", () => {
+    const legacy =
+      "ARKTEAM" +
+      btoa(
+        String.fromCharCode(
+          ...pako.deflate(
+            JSON.stringify({ v: 2, t: "team", n: "旧队", ops: ["隐现"] }),
+            { level: 9 },
+          ),
+        ),
+      );
+    const data = parseCode(legacy);
+    expect(data.v).toBe(2);
+    expect(data.n).toBe("旧队");
+    expect(data.ops).toEqual(["隐现"]);
+    expect(importTeam(data).team[0].name).toBe("隐现");
   });
 
   it("should import team content from parsed code", () => {
@@ -86,6 +163,11 @@ describe("useShareCode composable", () => {
     expect(imported.team[0].name).toBe("白铁");
     expect(imported.team[0].tier).toBe("Ⅵ");
     expect(imported.team[0].isSelfOperator).toBe(true);
+  });
+
+  it("should carry the game version through the code", () => {
+    const code = generateTeamCode(makeTeam(), "guicheng");
+    expect(parseCode(code).g).toBe("guicheng");
   });
 
   it("should reject empty code", () => {

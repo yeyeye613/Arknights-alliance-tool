@@ -8,7 +8,15 @@
     <div>
       <div class="share-content">
         <div class="share-code-section">
-          <label for="shareCode">分享码</label>
+          <label for="shareCode">
+            分享码
+            <span
+              v-if="shareCode"
+              class="code-length"
+            >
+              {{ shareCode.length }} 字符
+            </span>
+          </label>
           <div class="code-input-group">
             <input
               id="shareCode"
@@ -164,6 +172,13 @@
     margin-bottom: 8px;
     font-weight: 500;
     color: #ccc;
+  }
+
+  .code-length {
+    margin-left: 8px;
+    font-size: 12px;
+    font-weight: 400;
+    color: #777;
   }
 
   .code-input-group {

@@ -6,32 +6,21 @@ import {
   getGameVersion,
 } from "@/data/versions.js";
 import { getAvatarUrl } from "@/utils/index.js";
+import {
+  decodeCompact,
+  encodeCollection,
+  encodeFull,
+  encodeTeam,
+  isCompactCode,
+} from "@/utils/shareCodec.js";
 
-const PFX_TEAM = "ARKTEAM";
-const PFX_COL = "ARKCOL";
-const PFX_FULL = "ARKFULL";
+/* v1 / v2 历史前缀：仍可解析，新码不再使用 */
+const LEGACY_PFX_TEAM = "ARKTEAM";
+const LEGACY_PFX_COL = "ARKCOL";
+const LEGACY_PFX_FULL = "ARKFULL";
 
-function encodeOperator(op) {
-  if (op.isSelfOperator && op.tier) {
-    return {
-      n: op.name,
-      t: op.tier,
-      s: 1,
-    };
-  }
-
-  return op.name;
-}
-
-function compressAndEncode(obj) {
-  const jsonStr = JSON.stringify(obj);
-  const compressed = pako.deflate(jsonStr, { level: 9 });
-  const base64 = btoa(String.fromCharCode.apply(null, compressed));
-  return base64;
-}
-
-function decodeAndDecompress(code) {
-  const binaryStr = atob(code);
+function legacyDecode(base64) {
+  const binaryStr = atob(base64);
   const bytes = new Uint8Array(binaryStr.length);
   for (let i = 0; i < binaryStr.length; i++) {
     bytes[i] = binaryStr.charCodeAt(i);
@@ -46,74 +35,48 @@ export function useShareCode() {
    * @param {string} [versionId] - 所属游戏版本
    * @returns {string} 分享码
    */
-  const generateTeamCode = (teamData, versionId) => {
-    const compactTeam = {
-      v: 2,
-      t: "team",
-      n: teamData.name,
-      ops: teamData.team.map(encodeOperator),
-      ...(versionId ? { g: versionId } : {}),
-    };
-    return `${PFX_TEAM}${compressAndEncode(compactTeam)}`;
-  };
+  const generateTeamCode = (teamData, versionId) =>
+    encodeTeam(teamData, versionId);
 
-  const generateCollectionCode = (collection, versionId) => {
-    const compactCollection = {
-      v: 2,
-      t: "collection",
-      n: collection.name,
-      teams: collection.teams.map((team) => ({
-        n: team.name,
-        ops: team.team.map(encodeOperator),
-      })),
-      ...(versionId ? { g: versionId } : {}),
-    };
-    return `${PFX_COL}${compressAndEncode(compactCollection)}`;
-  };
+  const generateCollectionCode = (collection, versionId) =>
+    encodeCollection(collection, versionId);
 
-  const generateFullCode = (savedTeams, teamCollections, versionId) => {
-    const fullData = {
-      v: 2,
-      t: "full",
-      teams: savedTeams.map((team) => ({
-        n: team.name,
-        ops: team.team.map(encodeOperator),
-      })),
-      collections: teamCollections.map((collection) => ({
-        n: collection.name,
-        teams: collection.teams.map((team) => ({
-          n: team.name,
-          ops: team.team.map(encodeOperator),
-        })),
-      })),
-      ...(versionId ? { g: versionId } : {}),
-    };
-    return `${PFX_FULL}${compressAndEncode(fullData)}`;
-  };
+  const generateFullCode = (savedTeams, teamCollections, versionId) =>
+    encodeFull(savedTeams, teamCollections, versionId);
 
-  const parseCode = (code) => {
+  const parseCode = (rawCode) => {
+    // 长码被聊天软件换行、复制带空格都很常见，先做归一化
+    const code = String(rawCode || "").replace(/\s+/g, "");
     if (!code) {
       throw new Error("密语不能为空");
     }
 
-    let prefix;
-    let base64Data;
-
-    if (code.startsWith(PFX_TEAM)) {
-      prefix = PFX_TEAM;
-      base64Data = code.slice(PFX_TEAM.length);
-    } else if (code.startsWith(PFX_COL)) {
-      prefix = PFX_COL;
-      base64Data = code.slice(PFX_COL.length);
-    } else if (code.startsWith(PFX_FULL)) {
-      prefix = PFX_FULL;
-      base64Data = code.slice(PFX_FULL.length);
-    } else {
-      throw new Error("无效的密语格式");
+    // 历史前缀 ARKTEAM / ARKCOL / ARKFULL 也以 A 开头，必须先判断
+    const legacyPrefix = [LEGACY_PFX_FULL, LEGACY_PFX_TEAM, LEGACY_PFX_COL].find(
+      (prefix) => code.startsWith(prefix),
+    );
+    if (legacyPrefix) {
+      return parseLegacy(code, legacyPrefix.length);
     }
 
-    const decompressed = decodeAndDecompress(base64Data);
-    const data = JSON.parse(decompressed);
+    if (isCompactCode(code)) {
+      const data = decodeCompact(code);
+      data.type = data.t;
+      return data;
+    }
+
+    throw new Error("无效的密语格式");
+  };
+
+  const parseLegacy = (code, prefixLength) => {
+    const base64Data = code.slice(prefixLength);
+
+    let data;
+    try {
+      data = JSON.parse(legacyDecode(base64Data));
+    } catch {
+      throw new Error("分享码已损坏，请重新复制完整内容");
+    }
 
     if (data.v !== 1 && data.v !== 2) {
       throw new Error("不支持的密语版本");
