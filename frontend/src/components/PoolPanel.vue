@@ -48,6 +48,85 @@
             {{ name }}
           </option>
         </select>
+
+        <select
+          v-model="selectedTraitType"
+          class="filter-select"
+        >
+          <option value="">特质类型</option>
+          <option
+            v-for="type in traitTypeOptions"
+            :key="type"
+            :value="type"
+          >
+            {{ type }}
+          </option>
+        </select>
+        <select
+          v-model="selectedTraitTrigger"
+          class="filter-select"
+        >
+          <option value="">触发时机</option>
+          <option
+            v-for="trigger in traitTriggerOptions"
+            :key="trigger"
+            :value="trigger"
+          >
+            {{ trigger }}
+          </option>
+        </select>
+
+        <div class="ban-filter">
+          <button
+            type="button"
+            class="ban-toggle"
+            :class="{ 'has-banned': bannedCovenants.length > 0 }"
+            :title="bannedCovenants.length > 0 ? bannedCovenants.join('、') : 'Ban 盟约'"
+            @click="banPanelOpen = !banPanelOpen"
+          >
+            <span
+              v-if="bannedCovenants.length === 0"
+              class="ban-label"
+              >Ban盟约</span
+            >
+            <span
+              v-else
+              class="ban-badge"
+              >{{ bannedCovenants.length }}</span
+            >
+          </button>
+          <div
+            v-if="banPanelOpen"
+            class="ban-panel"
+          >
+            <div class="ban-panel-header">
+              <span class="ban-panel-title">Ban 盟约（干员的全部盟约都被 Ban 才会隐藏）</span>
+              <button
+                v-if="bannedCovenants.length > 0"
+                type="button"
+                class="ban-clear"
+                @click="bannedCovenants = []"
+              >
+                清空
+              </button>
+            </div>
+            <div class="ban-options">
+              <label
+                v-for="cov in allCovenants"
+                :key="cov"
+                class="ban-option"
+              >
+                <input
+                  type="checkbox"
+                  :value="cov"
+                  v-model="bannedCovenants"
+                />
+                {{ cov }}
+              </label>
+            </div>
+          </div>
+        </div>
+
         <button
           type="button"
           class="add-btn"
@@ -130,6 +209,10 @@
   const selectedTier = ref("");
   const selectedMainCov = ref("");
   const selectedSubCov = ref("");
+  const selectedTraitType = ref("");
+  const selectedTraitTrigger = ref("");
+  const bannedCovenants = ref([]);
+  const banPanelOpen = ref(false);
   const showAddOpModal = ref(false);
   const selectedSelfOperators = ref([]);
   const SELF_OP_STORAGE_KEY = "arknights_selected_self_operators";
@@ -161,6 +244,44 @@
     return op.tier || getOperatorTier(op.name, currentVersion.value) || "";
   };
 
+  /** 当前版本可选的全部盟约（核心 + 附加），供 Ban 列表使用 */
+  const allCovenants = computed(() => [
+    ...coreCovenants.value,
+    ...additionalCovenants.value,
+  ]);
+
+  /** 当前版本出现的特质类型选项 */
+  const traitTypeOptions = computed(() => {
+    const types = new Set();
+    for (const data of Object.values(currentVersion.value.operators)) {
+      for (const trait of data.traits || []) {
+        if (trait.type) {
+          types.add(trait.type);
+        }
+      }
+    }
+    return [...types];
+  });
+
+  /** 当前版本出现的特质触发时机选项 */
+  const traitTriggerOptions = computed(() => {
+    const triggers = new Set();
+    for (const data of Object.values(currentVersion.value.operators)) {
+      for (const trait of data.traits || []) {
+        if (trait.trigger) {
+          triggers.add(trait.trigger);
+        }
+      }
+    }
+    return [...triggers];
+  });
+
+  /** Ban 判定：干员的全部盟约都被 Ban 才隐藏（无盟约的干员不受影响） */
+  const isBanned = (covenants) =>
+    bannedCovenants.value.length > 0 &&
+    covenants.length > 0 &&
+    covenants.every((cov) => bannedCovenants.value.includes(cov));
+
   /** 悬停展示干员特质与所属盟约 */
   const hoverTraits = (event, op) => {
     showTraitTooltip(
@@ -179,13 +300,28 @@
         return false;
       }
       const covenants = getOperatorCovenants(op.name, currentVersion.value);
+      const traits = getOperatorTraits(op.name, currentVersion.value);
       const matchName = op.name.includes(searchQuery.value);
       const matchTier = selectedTier.value === "" || getTier(op) === selectedTier.value;
       const matchMainCov =
         selectedMainCov.value === "" || covenants.includes(selectedMainCov.value);
       const matchSubCov =
         selectedSubCov.value === "" || covenants.includes(selectedSubCov.value);
-      return matchName && matchTier && matchMainCov && matchSubCov;
+      const matchTraitType =
+        selectedTraitType.value === "" ||
+        traits.some((trait) => trait.type === selectedTraitType.value);
+      const matchTraitTrigger =
+        selectedTraitTrigger.value === "" ||
+        traits.some((trait) => trait.trigger === selectedTraitTrigger.value);
+      return (
+        matchName &&
+        matchTier &&
+        matchMainCov &&
+        matchSubCov &&
+        matchTraitType &&
+        matchTraitTrigger &&
+        !isBanned(covenants)
+      );
     });
   });
 
@@ -197,6 +333,15 @@
     if (!additionalCovenants.value.includes(selectedSubCov.value)) {
       selectedSubCov.value = "";
     }
+    if (!traitTypeOptions.value.includes(selectedTraitType.value)) {
+      selectedTraitType.value = "";
+    }
+    if (!traitTriggerOptions.value.includes(selectedTraitTrigger.value)) {
+      selectedTraitTrigger.value = "";
+    }
+    bannedCovenants.value = bannedCovenants.value.filter((cov) =>
+      allCovenants.value.includes(cov),
+    );
   });
 
   const addToTeam = (op) => {
@@ -258,9 +403,9 @@
   }
 
   .filter-controls {
-    display: grid;
-    grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(72px, 0.8fr)) auto;
-    gap: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
     width: 100%;
     align-items: center;
   }
@@ -276,8 +421,129 @@
     min-width: 0;
   }
 
+  /* 干员名不会太长，搜索栏固定窄宽 */
   .search-input {
-    width: 100%;
+    flex: 0 0 128px;
+    width: 128px;
+  }
+
+  .filter-select {
+    flex: 1 1 82px;
+    max-width: 132px;
+    padding: 8px 6px;
+  }
+
+  /* Ban 盟约 */
+  .ban-filter {
+    position: relative;
+    flex: 0 0 auto;
+  }
+
+  .ban-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 42px;
+    height: 34px;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    color: #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0 10px;
+  }
+
+  .ban-toggle:hover {
+    border-color: #ff6b6b;
+    color: #ffb4b4;
+  }
+
+  .ban-toggle.has-banned {
+    border-color: rgba(255, 107, 107, 0.6);
+    background: rgba(255, 107, 107, 0.12);
+    padding: 0 6px;
+  }
+
+  .ban-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    background: #ff4d4f;
+    color: #fff;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 10px;
+    line-height: 1;
+  }
+
+  .ban-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 60;
+    width: 300px;
+    max-width: 78vw;
+    background: #202020;
+    border: 1px solid #555;
+    border-radius: 6px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+    padding: 10px;
+  }
+
+  .ban-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .ban-panel-title {
+    font-size: 12px;
+    color: #aaa;
+    line-height: 1.4;
+  }
+
+  .ban-clear {
+    background: transparent;
+    border: 1px solid #555;
+    color: #bbb;
+    font-size: 12px;
+    border-radius: 3px;
+    padding: 2px 8px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .ban-clear:hover {
+    color: #fff;
+    border-color: #999;
+  }
+
+  .ban-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px 8px;
+  }
+
+  .ban-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    color: #ddd;
+    cursor: pointer;
+    white-space: nowrap;
+    padding: 2px;
+  }
+
+  .ban-option input {
+    accent-color: #ff4d4f;
+    cursor: pointer;
   }
 
   /* 干员单元格 */
@@ -365,11 +631,12 @@
     border: none;
     color: #121212;
     border-radius: 4px;
-    padding: 8px 12px;
+    padding: 8px 10px;
     font-size: 13px;
     font-weight: bold;
     cursor: pointer;
     white-space: nowrap;
+    flex: 0 0 auto;
   }
 
   .add-btn:hover {
@@ -377,16 +644,12 @@
   }
 
   @media (max-width: 1280px) {
-    .filter-controls {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .search-input {
-      grid-column: span 2;
-    }
-
     .add-btn {
       min-width: 0;
+    }
+
+    .ban-panel {
+      width: 280px;
     }
   }
 
@@ -395,12 +658,8 @@
       width: 90vw;
     }
 
-    .filter-controls {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .add-btn {
-      grid-column: span 2;
+    .search-input {
+      flex: 1 1 120px;
     }
   }
 </style>
