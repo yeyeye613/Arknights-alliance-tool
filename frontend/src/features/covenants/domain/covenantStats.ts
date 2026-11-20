@@ -19,7 +19,7 @@ import type { GameVersionLike } from "@/entities/version";
 import { getMorphCovenant, getOperatorEquipmentNames } from "@/features/equipment/domain/equipRules";
 
 /** 调和类盟约会为核心盟约额外 +1 人数 */
-export const HARMONY_COVENANT = "调和";
+const HARMONY_COVENANT = "调和";
 
 /** 盟约名 -> 人数 */
 export type CovenantCounts = Record<string, number>;

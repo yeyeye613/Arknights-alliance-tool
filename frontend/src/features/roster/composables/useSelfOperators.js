@@ -24,7 +24,7 @@ const ALLOWED_TIERS = ["Ⅴ", "Ⅵ"];
  * 过滤并补齐展示字段：非法的历史缓存会被丢弃
  * @param {Array} operators 缓存里的原始数据
  */
-export function normalizeSelfOperators(operators) {
+function normalizeSelfOperators(operators) {
   if (!Array.isArray(operators)) {
     return [];
   }

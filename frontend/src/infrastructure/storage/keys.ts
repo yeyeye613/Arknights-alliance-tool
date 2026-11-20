@@ -22,5 +22,3 @@ export const STORAGE_KEYS = {
   /** 筛选区折叠状态，"1" / "0" */
   poolFilterCollapsed: "arknights_pool_filter_collapsed",
 } as const;
-
-export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

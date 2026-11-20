@@ -62,7 +62,7 @@ function legacyDecode(base64: string): string {
  * @param code 完整分享码（含前缀）
  * @param prefixLength 前缀长度
  */
-export function parseLegacyCode(
+function parseLegacyCode(
   code: string,
   prefixLength: number,
 ): ParsedShareData {

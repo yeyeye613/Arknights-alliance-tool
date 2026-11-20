@@ -30,18 +30,8 @@ export const TIER_LABELS = {
  * @param {Object} version - 版本数据
  * @returns {Object} 装备名 -> 装备数据
  */
-export function getEquipments(version) {
+function getEquipments(version) {
   return version?.equipments || {};
-}
-
-/**
- * 按名称取装备
- * @param {Object} version - 版本数据
- * @param {string} name - 装备名
- * @returns {Object|null}
- */
-export function findEquipment(version, name) {
-  return getEquipments(version)[name] || null;
 }
 
 /**

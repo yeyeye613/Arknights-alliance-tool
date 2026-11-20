@@ -15,7 +15,7 @@ const EDGE_MARGIN = 8;
 const CURSOR_OFFSET = 14;
 
 /** 触屏设备没有 mouseleave，提示改为自动消失 */
-export const TOUCH_HIDE_DELAY = 2600;
+const TOUCH_HIDE_DELAY = 2600;
 
 /** 是否为触摸 / 无悬停能力的设备 */
 export function isCoarsePointer() {

@@ -22,7 +22,7 @@ import codebook from "@/data/opCodebook.json";
 import equipCodebook from "@/data/equipCodebook.json";
 
 /** 协议前缀（v3 使用单字符，v1/v2 的 ARKTEAM / ARKCOL 优先匹配） */
-export const CODE_PREFIX = "A";
+const CODE_PREFIX = "A";
 
 const MAGIC = 0xc0;
 /** 带装备字段的分享码用不同 magic，旧版本解码器会直接判为无效而不是错读 */

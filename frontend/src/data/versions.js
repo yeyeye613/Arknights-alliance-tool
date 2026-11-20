@@ -237,13 +237,3 @@ export function findOperatorEverywhere(name) {
   return SELF_OPS[name] || null;
 }
 
-/**
- * 获取干员所属的版本 id 列表
- * @param {string} name - 干员名
- * @returns {Array<string>} 版本 id 列表
- */
-export function getOperatorVersionIds(name) {
-  return GAME_VERSIONS.filter((version) => version.operators[name]).map(
-    (version) => version.id,
-  );
-}

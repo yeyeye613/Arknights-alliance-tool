@@ -5,7 +5,7 @@ import type { GameVersionLike } from "./version";
 import { getCovenantsByGroup as rawGetCovenantsByGroup } from "@/data/versions.js";
 
 /** 盟约效果条目 */
-export interface CovenantEffect {
+interface CovenantEffect {
   type: string;
   description: string;
   /** 生效条件，如「在场3名不同乌萨斯干员」 */
