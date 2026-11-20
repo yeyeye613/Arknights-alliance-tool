@@ -69,11 +69,12 @@
       </div>
     </div>
 
-    <AddOpPanel
+    <SelfOperatorDialog
       :show="showAddOpModal"
       :selected-operators="selfOperators"
       @close="showAddOpModal = false"
       @confirm="handleSelfOperatorsConfirm"
+      @notify="emit('notify', $event)"
     />
   </section>
 </template>
@@ -82,7 +83,7 @@
   import { computed, onMounted, onUnmounted, ref } from "vue";
   import { VueDraggable } from "vue-draggable-plus";
 
-  import AddOpPanel from "@/features/roster/components/SelfOperatorDialog.vue";
+  import SelfOperatorDialog from "@/features/roster/components/SelfOperatorDialog.vue";
   import OperatorCard from "@/features/roster/components/OperatorCard.vue";
   import PoolFilters from "@/features/roster/components/PoolFilters.vue";
   import { getOperatorCovenants, getOperatorTraits } from "@/data/versions.js";
@@ -156,7 +157,7 @@
     }
   };
 
-  const emit = defineEmits(["addToTeam"]);
+  const emit = defineEmits(["addToTeam", "notify"]);
 
   // 干员池处理
   const baseOperators = computed(() =>

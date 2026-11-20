@@ -7,7 +7,8 @@
   >
     <div class="self-op-panel">
       <p class="desc">
-        点击干员可在未选择、五阶、六阶之间切换。五阶和六阶分别最多选择 2 名。
+        点击干员可在未选择、五阶、六阶之间切换。五阶和六阶分别最多选择
+        {{ MAX_SELF_PER_TIER }} 名。
       </p>
       <p
         v-if="currentVersion.selfOperatorStrategy === 'faction'"
@@ -24,8 +25,8 @@
           placeholder="搜索自选干员名称..."
         />
         <div class="toolbar-actions">
-          <span class="count-tag">五阶 {{ selectedTierFive.length }}/2</span>
-          <span class="count-tag">六阶 {{ selectedTierSix.length }}/2</span>
+          <span class="count-tag">五阶 {{ selectedTierFive.length }}/{{ MAX_SELF_PER_TIER }}</span>
+          <span class="count-tag">六阶 {{ selectedTierSix.length }}/{{ MAX_SELF_PER_TIER }}</span>
           <button
             type="button"
             class="clear-btn"
@@ -109,7 +110,10 @@
     },
   });
 
-  const emit = defineEmits(["close", "confirm"]);
+  const emit = defineEmits(["close", "confirm", "notify"]);
+
+  /** 每个阶数最多可选的干员数（规则值只在这里定义，文案与计数都用它插值） */
+  const MAX_SELF_PER_TIER = 2;
 
   const operatorNames = computed(() => Object.keys(selfOpConfig).sort());
   const selectedTierFive = ref([]);
@@ -155,8 +159,8 @@
     const currentTier = getSelectedTier(name);
 
     if (currentTier === "") {
-      if (selectedTierFive.value.length >= 2) {
-        alert("五阶自选干员最多只能选择 2 名");
+      if (selectedTierFive.value.length >= MAX_SELF_PER_TIER) {
+        emit("notify", `五阶自选干员最多只能选择 ${MAX_SELF_PER_TIER} 名`);
         return;
       }
       selectedTierFive.value.push(name);
@@ -164,8 +168,8 @@
     }
 
     if (currentTier === "Ⅴ") {
-      if (selectedTierSix.value.length >= 2) {
-        alert("六阶自选干员最多只能选择 2 名");
+      if (selectedTierSix.value.length >= MAX_SELF_PER_TIER) {
+        emit("notify", `六阶自选干员最多只能选择 ${MAX_SELF_PER_TIER} 名`);
         return;
       }
       selectedTierFive.value = selectedTierFive.value.filter(

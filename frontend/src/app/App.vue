@@ -35,6 +35,7 @@
         <PoolPanel
           v-if="isPoolTab"
           @add-to-team="handleAddToTeam"
+          @notify="showTempMessage"
         />
 
         <!-- 装备池：独立标签页，点击「装备池」切到这里 -->
