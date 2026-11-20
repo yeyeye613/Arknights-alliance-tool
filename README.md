@@ -1,264 +1,177 @@
-# 明日方舟卫戍协议配队工具
+# 卫戍协议练功房
 
-一个基于 Vue 3 + Vite 的明日方舟「卫戍协议」配队小工具，用来辅助抓位、拼盟约、保存编队，以及通过分享码交流阵容。
+明日方舟「卫戍协议」配队工具。把干员池、盟约层数、装备槽、分享码收进一个页面，用来试阵容、比盟约、存编队。
 
-支持两个游戏版本，可在页面右上角切换：
+纯前端应用，无需后端，数据保存在浏览器本地。
 
-- **卫戍协议：盟约**（2024 赛季数据）
-- **卫戍协议·规程**（当前赛季数据）
+**[在线体验](https://yeyeye613.github.io/Arknights-alliance-tool/)**
 
-在线体验：
-[https://yeyeye613.github.io/Arknights-alliance-tool/](https://yeyeye613.github.io/Arknights-alliance-tool/)
+> 非官方工具，与鹰角网络 / 明日方舟官方无关。数据整理自 [PRTS 明日方舟中文 Wiki](https://prts.wiki)。
 
-## 项目简介
+## 截图
 
-这个项目面向卫戍协议配队场景，核心目标是把游戏内分散的信息整理成一个更容易试验和对比的编队面板。
+干员池与当前编队（盟约版），上方是实时统计的盟约人数，下方是已激活效果：
 
-在当前实现中，你可以：
+<img src="docs/screenshots/desktop-overview.png" alt="干员池与当前编队" width="100%">
 
-- 在「盟约」与「规程」两个版本之间切换，干员池、盟约效果、编队列表都会跟着切换
-- 从干员池中按名称、阶数、阵营、盟约筛选干员
-- 点击或拖拽干员进入当前编队
-- 实时查看当前编队的盟约层数和已激活效果
-- 自定义编队人数上限
-- 保存编队，并按合集进行整理
-- 将单个编队或整个合集导出为分享码
-- 通过分享码导入其他人的编队数据
-- 将数据持久化到浏览器 `localStorage`
+装备池与临时装备池（规程版）——点选或拖拽都行，右侧是移动端布局：
 
-## 功能说明
+<img src="docs/screenshots/desktop-equipment.png" alt="装备池与临时装备池" width="70%"> <img src="docs/screenshots/mobile-overview.png" alt="移动端布局" width="26%">
 
-### 0. 游戏版本切换
+悬停干员卡片查看特质，悬停盟约图标查看激活门槛与全部效果：
 
-- 页面顶部提供版本切换按钮，选中状态会写入 `localStorage`，下次打开保持上次选择
-- 切换版本后，干员池、阵营/盟约筛选项、盟约效果文案、已保存编队列表都会对应变化
-- 已保存的编队、合集、分享码都会记录所属版本；加载其他版本的编队时会自动切换版本
-- 若当前编队中存在不属于当前版本的干员，会以红色虚线标记并提示，这些干员不参与盟约层数统计
+<img src="docs/screenshots/desktop-trait-tooltip.png" alt="特质悬停提示" width="100%">
 
-版本数据集中在 `src/data/versions.js` 注册，切换状态由 `src/composables/useGameVersion.js` 管理。
+## 功能
 
-### 1. 干员池
+### 双版本数据
 
-- 支持名称搜索
-- 筛选区可折叠：收起后只保留搜索框、视图切换与「筛选」按钮，干员列表获得更大空间
-- 阵营 / 盟约支持「图标 ⇄ 文字」两种筛选方式，偏好写入 localStorage
-- 支持按阶数、特质类型、特质触发时机筛选（选项按当前版本数据自动推导）
-- 支持 Ban 盟约：独立的内联区块，点击图标即可 Ban / 取消；**干员的全部盟约都被 Ban 才会隐藏**，只要还有一个未 Ban 的盟约就仍会显示；折叠后区块标题只显示已 Ban 数量的红色角标
-- 已选条件以「已筛选」摘要回显，可逐项取消或一键清除（筛选区折叠时仍可见）
-- 展示干员头像与阶数信息
-- 鼠标悬停干员卡片（干员池或当前编队）可查看特质：类别、触发时机、效果与进阶后效果
+页面右上角可切换两个活动的数据，切换结果写入 `localStorage`，下次打开保持上次选择。
 
-干员数据按版本存放在 `src/data/operators.json`（盟约）与 `src/data/operators.guicheng.json`（规程），图片资源位于 `public/resource/image`。特质悬停提示由 `src/components/TraitTooltip.vue` + `src/composables/useTraitTooltip.js` 实现，浮层挂载到 `body` 上，避免被滚动容器裁剪。
+| 版本 | 说明 | 核心盟约 | 干员 | 装备 |
+| --- | --- | --- | --- | --- |
+| 卫戍协议：盟约 | 2024 赛季数据 | 8 个 | 113 名 | 无 |
+| 卫戍协议·规程 | 当前赛季数据 | 10 个 | 143 名 | 70 件 |
 
-### 2. 当前编队
+切换版本后，干员池、阵营 / 盟约筛选、盟约效果文案、已保存列表都会跟着切换。编队里残留的其他版本干员会用红色虚线标出，且不计入盟约层数。
 
-- 支持拖拽调整编队顺序
-- 支持移除单个干员
-- 支持清空当前编队
-- 支持设置编队上限，范围为 `1` 到 `20`
-- 自动统计当前编队携带的盟约
-- 展开后可查看已激活盟约的详细效果
+### 干员池
 
-### 3. 编队管理
+- 按名称搜索，按阶数、阵营（核心盟约）、盟约（附加盟约）、特质类型、特质触发时机筛选
+- 盟约按钮三态切换：未选 → 筛选 → Ban → 取消 Ban，一次手势完成「只看这个」和「不要这个」
+- Ban 规则按版本区分：规程版 Ban 阵营等于隐藏该阵营全部干员；盟约版需干员全部盟约被 Ban 才隐藏
+- 筛选区可折叠，已选条件以摘要回显，可逐项取消或一键清除
+- 阵营 / 盟约筛选支持「图标 ⇄ 文字」两种展示，偏好本地记忆
+- 自选（甄选）干员：五阶、六阶各最多 2 名，选择状态持久化
+- 悬停干员卡片查看特质类别、触发时机、效果与进阶效果
 
-- 保存当前编队
-- 编辑已保存编队
-- 删除已保存编队
-- 将未归类编队移动到指定合集
-- 展开/收起合集查看内部编队
-- 按当前版本过滤展示编队（未标记版本的历史存档归入「盟约」）
+### 当前编队与盟约
 
-保存数据分为两类：
+- 点击或拖拽入队，拖拽排序，单个移除、一键清空
+- 编队上限 1–20 可调，超出上限时自动截断
+- 实时统计各盟约人数，标记已激活盟约、进阶等级
+- 「调和」激活后为核心盟约额外 +1 的规则已计入统计
+- 展开可查看已激活盟约的完整效果说明
 
-- `savedTeams`：未归类编队
-- `teamCollections`：合集编队
+### 装备
 
-### 4. 分享与导入
+- 独立「装备池」标签页（仅规程版可见），按等阶与关键词筛选，70 件装备
+- 每位干员两个装备槽，支持点选和拖拽两种装配方式
+- 「临时装备池」放在编队干员下方，可从池中暂存多件再逐一分配
+- 「变形同构体」与指定装备同携时，携带者额外视为对应盟约成员，界面会标注该盟约里有多少人来自装备
+- 组合装备（如「不退者之盾」+「不退者力场」）会给出合成提示
+- 装备信息随编队一起进分享码
 
-项目内置压缩分享码机制：
+### 编队管理
 
-- `ARKTEAM`：单编队分享码
-- `ARKCOL`：合集分享码
-- `ARKFULL`：完整数据分享码基础实现已存在
+- 保存、编辑、删除编队，按合集归类
+- 合集可展开 / 收起，按当前版本过滤展示，未标记版本的历史存档归入盟约版
+- 加载其他版本的编队时自动切到对应版本
 
-分享码实现位于 `src/composables/useShareCode.js`，使用 `pako` 对数据进行压缩和 Base64 编码。分享码中额外记录版本标识（`g` 字段），导入时会自动切换到对应版本。
+### 分享与导入
+
+分享码为自研二进制协议（v3）
+
+- 单字符前缀 `A` + 类型（单编队 / 合集）
+- 干员、装备以码表下标引用，varint 编码，超出码表才写名字
+- 载荷超过 72 字节才 deflate，最后整体 Base62，不含 `+ / =` 等会被聊天软件吃掉的字符
+- 码内记录版本标识，导入时自动切换版本
+- 仍兼容 v1 / v2 的 `ARKTEAM` / `ARKCOL` 旧码（全量导出的 `ARKFULL` 从未上线，已随协议清理移除）
+
+### 离线与更新
+
+生产构建注册 Service Worker：应用外壳预缓存，干员头像走运行时 CacheFirst（345 张 / 14 MB 不入预缓存）。发现新版本时弹出提示，由用户决定何时刷新，不打断正在编辑的编队。
 
 ## 技术栈
 
-- Vue 3
-- Vite
-- TypeScript
-- JavaScript Composables
-- Vitest
-- `vue-draggable-plus`
-- `pako`
+| 类别 | 选型 |
+| --- | --- |
+| 框架 | Vue 3（`<script setup>`） |
+| 构建 | Vite 8 + TypeScript（配置层）/ JavaScript（业务层） |
+| 拖拽 | vue-draggable-plus |
+| 压缩 | pako（deflate） |
+| 离线 | vite-plugin-pwa + Workbox |
+| 测试 | Vitest + jsdom + @vue/test-utils |
+| 部署 | GitHub Actions → GitHub Pages |
 
-## 本地开发
+## 快速开始
 
-### 安装依赖
+需要 Node.js 20+（CI 使用 24）与 npm。
 
 ```bash
-cd frontend
+git clone git@github.com:yeyeye613/Arknights-alliance-tool.git
+cd Arknights-alliance-tool/frontend
 npm install
-```
-
-### 启动开发环境
-
-```bash
 npm run dev
 ```
 
-### 构建生产版本
+开发服务器默认跑在 `http://localhost:5173/Arknights-alliance-tool/`，注意带基路径。
 
-```bash
-npm run build
-```
+### 常用脚本
 
-### 运行测试
+| 命令 | 作用 |
+| --- | --- |
+| `npm run dev` | 启动开发服务器（HMR） |
+| `npm run build` | 类型检查 + 生产构建到 `dist/` |
+| `npm run preview` | 本地预览生产构建（PWA 需在此模式验证） |
+| `npm run typecheck` | 只跑 `vue-tsc`（.ts 与 .vue） |
+| `npm run lint` | ESLint（正确性规则，0 error 为合格） |
+| `npm run format` | Prettier 格式化（存量文件尚未整体格式化，建议只对改动文件执行） |
+| `npm run test` | 运行 Vitest（默认 watch 模式） |
+| `npm run test:run` | 单次跑完全部测试 |
+| `npm run coverage` | 生成覆盖率报告（`coverage/`，当前只测量不设阈值） |
+| `npm run codebook` | 依据数据文件追加分享码码表 |
 
-```bash
-npm run test
-```
-
-## 项目结构
+### 目录结构
 
 ```text
-frontend
-├─ public
-│  └─ resource/image         # 干员与盟约图片资源
-├─ src
-│  ├─ components             # 页面组件与弹窗组件
-│  ├─ composables            # 版本、编队、分享、弹窗、存储逻辑
-│  ├─ data                   # 干员、盟约、版本注册表
-│  ├─ tests                  # Vitest 单测
-│  ├─ utils                  # 图片与通用工具方法
-│  ├─ App.vue                # 页面主入口
-│  └─ main.ts                # 应用挂载入口
-├─ docs                      # 开发过程中的补充文档
-├─ vite.config.ts            # Vite 配置
-└─ package.json              # 前端脚本与依赖
+.
+├─ frontend
+│  ├─ public/resource/image   # 干员头像、盟约与装备图标
+│  ├─ scripts/gen-codebook.mjs# 码表生成（只追加）
+│  └─ src
+│     ├─ components           # 页面组件与弹窗
+│     ├─ composables          # 响应式胶水：版本、编队、存储、分享、提示、PWA
+│     ├─ domain               # 纯业务规则（无 Vue、无 DOM，可直接单测）
+│     ├─ data                 # 版本注册表与各版本数据集
+│     ├─ utils                # 分享码编解码、图片地址
+│     ├─ tests                # Vitest 单测
+│     ├─ App.vue              # 组合根
+│     └─ main.ts              # 挂载入口
+├─ architecture               # 架构文档
+├─ docs/screenshots           # README 截图
+└─ .github/workflows/deploy.yml
 ```
 
-## 核心模块
+## 文档
 
-### 页面组件
-
-- `VersionSwitch.vue`：游戏版本切换
-- `PoolPanel.vue`：干员池筛选与选择
-- `TeamPanel.vue`：当前编队与盟约效果展示
-- `SavedTeamsPanel.vue`：已保存编队与合集管理
-- `SaveTeamModal.vue`：保存/编辑编队
-- `ShareModal.vue`：展示分享码
-- `ImportModal.vue`：导入分享码
-
-### 组合式函数
-
-- `useGameVersion.js`：当前游戏版本状态与数据视图
-- `useTeamManagement.js`：当前编队增删与上限处理
-- `useTeamStorage.js`：本地存储与合集管理
-- `useShareCode.js`：分享码生成、解析、导入
-- `useModalState.js`：弹窗状态与临时消息
-- `useCovenantStats.js`：盟约层数与激活效果统计（按版本取数据）
+| 文档 | 内容 |
+| --- | --- |
+| [architecture/overview.md](architecture/overview.md) | 总体架构、分层、关键设计决策 |
+| [architecture/module-map.md](architecture/module-map.md) | 模块职责、入口与依赖方向 |
+| [architecture/data-model.md](architecture/data-model.md) | 核心数据结构、存储键与不变量 |
+| [architecture/data-flow.md](architecture/data-flow.md) | 启动、版本切换、盟约统计、分享码等流程 |
+| [refactoring-plan.md](docs/architecture/refactoring-plan.md) | 架构审计结论与分阶段重构计划（P0–P5） |
+| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | 贡献流程与开发规范 |
+| [docs/CHANGELOG.md](docs/CHANGELOG.md) | 版本变更记录 |
+| [docs/SECURITY.md](docs/SECURITY.md) | 安全问题反馈方式 |
+| [LICENSE](LICENSE) | MIT |
 
 ## 数据说明
 
-数据均整理自 [PRTS 明日方舟中文 Wiki](https://prts.wiki)：
+盟约、干员、特质、装备数据均来自 PRTS：
 
-- 卫戍协议：盟约 —— <https://prts.wiki/w/卫戍协议：盟约>
-- 卫戍协议·规程 / PRTS盟约记录 —— <https://prts.wiki/w/卫戍协议·规程/PRTS盟约记录>
+- [卫戍协议：盟约](https://prts.wiki/w/卫戍协议：盟约)
+- [卫戍协议·规程 / PRTS盟约记录](https://prts.wiki/w/卫戍协议·规程/PRTS盟约记录)
 
-### `versions.js`
+数据结构与字段含义见 [architecture/data-model.md](architecture/data-model.md)；需要更新赛季数据时，按 [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md#数据更新流程) 的步骤操作。
 
-版本注册表，声明每个版本可用的盟约数据、干员数据与展示文案：
+## 致谢
 
-```js
-{
-  id: "guicheng",
-  label: "卫戍协议·规程",
-  covenants: covenantsGuicheng,
-  operators: operatorsGuicheng,
-  selfOperatorStrategy: "faction",
-}
-```
+- 数据来源：[PRTS 明日方舟中文 Wiki](https://prts.wiki)
+- 游戏素材版权归上海鹰角网络科技有限公司所有
+- 本项目仅用于配队研究与交流，不作商业用途
 
-`selfOperatorStrategy` 控制「自选干员」的盟约推断方式：
+## 开源协议
 
-- `direct`：直接使用 `selfOp.json` 中登记的核心盟约（盟约版本）
-- `faction`：按阵营匹配当前版本的核心盟约，匹配不到时归为「协防干员」（规程版本）
-
-### `covenants.json` / `covenants.guicheng.json`
-
-记录每个盟约的：
-
-- `group`：`core`（核心盟约）或 `additional`（附加盟约）
-- `activateCount`：激活所需人数
-- `effects`：基础效果 / 在场效果 / 层数效果
-- `operators`：关联干员列表
-
-### `operators.json` / `operators.guicheng.json`
-
-记录每位干员的：
-
-- 阶数（Ⅰ~Ⅵ）
-- 所属盟约列表
-- `traits`：特质列表，鼠标悬停在干员卡片上会展示
-
-每个特质对象形如：
-
-```json
-{
-  "type": "持续叠加",
-  "trigger": "进入休整期时",
-  "description": "转化2层【乌萨斯】临时层数为固定层数",
-  "upgraded": "转化4层【乌萨斯】临时层数为固定层数"
-}
-```
-
-- `type`：特质类别（作战能力 / 整备能力 / 单次叠加 / 持续叠加 / 特异化）
-- `trigger`：触发时机，正文中形如 `<战斗中>` 的条件标记会在提示框里渲染成行内标签
-- `upgraded`：进阶（叠加到更高层数）后的效果文本
-
-两个版本的特质数据均来自 PRTS：规程版取自《PRTS盟约记录》页面的「干员数据库」表格（143 人全覆盖）。
-
-## 部署说明
-
-项目通过 GitHub Actions 自动部署到 GitHub Pages。
-
-- 工作流文件：`.github/workflows/deploy.yml`
-- 构建目录：`frontend/dist`
-- 页面基路径：`/Arknights-alliance-tool/`
-
-对应配置已写在 `vite.config.ts` 中：
-
-```ts
-base: "/Arknights-alliance-tool/"
-```
-
-## 测试现状
-
-当前仓库已经包含单元测试，主要覆盖：
-
-- 分享码生成、解析、导入（含版本标识）
-- 本地存储初始化、保存、移动、删除
-- 盟约层数、激活与进阶效果统计
-- 两个版本的数据完整性与差异
-- 版本切换后干员池、盟约统计联动
-- 已保存编队的版本过滤与索引一致性
-- 应用整体渲染冒烟测试
-
-测试文件位于：
-
-- `src/tests/useShareCode.spec.js`
-- `src/tests/useTeamStorage.spec.js`
-- `src/tests/useCovenantStats.spec.js`
-- `src/tests/gameVersion.spec.js`
-- `src/tests/traitTooltip.spec.js`
-- `src/tests/app.smoke.spec.js`
-
-## 后续可扩展方向
-
-- 自选干员在规程版本下按实际阵营更细粒度地匹配盟约
-- 增加装备系统与一次性装备管理
-- 完善完整数据导入导出入口
-- 增加更多异常处理与数据校验
-- 补充更多 UI 和业务测试
+[MIT](LICENSE)
