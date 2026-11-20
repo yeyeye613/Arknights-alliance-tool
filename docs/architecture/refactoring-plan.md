@@ -600,12 +600,216 @@ flowchart LR
 
 后续若要再调整目录，同样的手法可用：改映射表 → 干跑 → 落盘 → 四次校验。
 
-### P5 清理与补齐（概要）
+### P5 清理与类型化（详案，待确认）
 
-- 删 `App.vue` 剩余 9 个未用绑定（`clearTeam` / `addOrUpdateTeam` / `deleteStoredTeam` / `moveStoredTeam` / `teamName` / `selectedCollection` / `showNewCollectionInput` / `newCollectionName` / `importCode`）
-- `covenant.operators` 决策（M2）：删除或改名标注
-- `data/versions.js` 拆分收尾，`versionAdapter` 退化为 `entities/operator.ts`
-- `entities/*.ts` 类型补齐，`domain` 逐步加 `@ts-check`
+P5 与前四个阶段性质不同：P1–P4 都是「搬东西 + 改调用」，P5 要动的是**结构本身**（`App.vue` 的绑定、模块的返回值、类型的归属）。因此每一步都按「一处改动 + 一条可执行验收」拆开，任何一步失败都能单独回滚。
+
+#### 现状测算（2026-11-20）
+
+| 项 | 实测 | 取证命令 |
+| --- | --- | --- |
+| `App.vue` | 677 行（template 145 / script 294 / style 236） | `wc -l` + 分段行号 |
+| `App.vue` 未用绑定 | 9 个 | `eslint -f json` |
+| 其余 lint 警告 | 2 个（`EquipmentPool` 的 `props`、`ShareDialog` 的 `err`） | 同上，合计 **11 warning / 0 error** |
+| `useModalState` | 96 行、21 个返回值，仅 `App.vue` 一处消费 | `wc -l`、`grep -rn useModalState src` |
+| `versionAdapter.ts` / `types.ts` | 114 / 111 行；前者 6 个引用点、后者 7 个 | `grep -rl` |
+| 跨 feature 依赖 | 26 条，全部是**具体的具名/默认导入**（无环，见下） | 见「依赖实测」 |
+| 非测试 `.js` | 16 个（14 `.ts`、24 `.vue`） | `find src -name "*.js" -not -path "*/tests/*"` |
+| `covenant.operators` | 49 处（盟约版 23 + 规程版 26），运行时 **0 读取** | 递归扫 JSON + `grep` |
+| 测试基线 | 209 用例 / 22 文件 | `npm run test:run` |
+
+**依赖实测**（源码，不含 tests）：
+
+```
+game-version  ← 无跨 feature 依赖
+equipment     ← game-version
+covenants     ← equipment, game-version
+roster        ← covenants, game-version
+formation     ← roster, covenants, equipment, game-version
+library       ← formation
+sharing       ← 无
+```
+
+这是一条干净的链，**没有环**。（P4 时按 `@/features/` 做粗粒度 grep 会看到 covenants ↔ equipment、formation ↔ equipment 的「环」，那是两侧 `tests/` 互相引用测试夹具造成的假象；排除 tests 后消失。）
+
+跨 feature 导入的完整清单（收口时要一一对应到桶的导出面）：
+
+| 消费方 | 来源 | 符号 |
+| --- | --- | --- |
+| covenants | `equipment/domain/equipRules` | `getMorphCovenant` `getOperatorEquipmentNames` |
+| formation | `equipment/domain/equipRules` | `EQUIPMENT_SLOT_COUNT` `equipToOperator` `getOperatorEquipmentNames` `hasEquipmentPool` `removeOperatorEquipment` |
+| formation | `equipment/composables/useEquipmentDrag` | `hasEquipmentDrag` `readEquipmentDrag` |
+| formation | `roster/composables/useTraitTooltip` | `showTraitTooltip` `hideTraitTooltip` `moveTraitTooltip` |
+| formation | `covenants/composables/useCovenantStats` | `useCovenantStats` |
+| roster | `covenants/composables/useCovenantTooltip` | `showCovenantTooltip` `hideCovenantTooltip` `moveCovenantTooltip` `isCoarsePointer` |
+| library | `formation/domain/teamRules` | `resolveTeamVersionId` |
+| 全部 | `game-version/composables/useGameVersion` | `useGameVersion` |
+
+组件级默认导入 3 条：`formation → roster/OperatorCard`、`formation → covenants/CovenantsPanel`、`formation → equipment/EquipmentPicker`。
+
+---
+
+#### P5-a 死代码与 lint 归零
+
+**目标**：`eslint . --max-warnings 0` 通过。
+
+| 改动 | 说明 |
+| --- | --- |
+| 删 `App.vue` 9 个未用绑定 | `clearTeam` / `addOrUpdateTeam` / `deleteStoredTeam` / `moveStoredTeam` / `teamName` / `selectedCollection` / `showNewCollectionInput` / `newCollectionName` / `importCode` |
+| `EquipmentPool.vue` | `const props = defineProps(...)` → `defineProps(...)`。模板直接用 `staged`，脚本里没用过 `props`，不是死 prop |
+| `ShareDialog.vue` | `catch (err)` → `catch`（未使用绑定） |
+
+要注意的两点，避免「删了才发现有用」：
+
+1. `clearTeam` 确实是死绑定，但**清空功能没坏**——`TeamPanel` 的 `clear-team` 事件由模板内联处理（`@clear-team="team = []"`）。删掉解构即可，不要顺手把事件改掉。
+2. `teamName` / `selectedCollection` / `importCode` 在 `App.vue` 是死值，因为**弹窗组件早已自己持有输入状态**（`SaveTeamDialog` 的 `teamName`、`ImportDialog` 的 `importCode`）。删掉后 `useModalState` 里对应的 ref 也要一起删，否则 P5-c 会把它当成「要迁移的状态」再搬一次。
+
+**验收**：`npx eslint . --max-warnings 0`；`npm run test:run`（209 绿，不应有任何用例变动）。
+**风险**：低。唯一风险是删到模板仍在用的绑定——上面 9 个已逐个 `grep` 确认只出现在解构处。
+
+---
+
+#### P5-b features 桶文件与依赖收口
+
+**目标**：跨 feature 只能 `import ... from "@/features/<name>"`，不再出现 `@/features/roster/composables/xxx.js` 这种深引。
+
+每个 feature 建一个 `index.ts`，**只导出被别的 feature 与 `app/` 用到的符号**，不做 `export *`：
+
+| 桶 | 导出面 |
+| --- | --- |
+| `game-version/index.ts` | `useGameVersion` |
+| `equipment/index.ts` | `EquipmentPool` `EquipmentStaging` `EquipmentPicker` `useEquipmentDrag`（`hasEquipmentDrag` `readEquipmentDrag`）`equipRules` 的 5 个被引符号 |
+| `covenants/index.ts` | `CovenantsPanel` `useCovenantStats` `useCovenantTooltip`（含 `isCoarsePointer`） |
+| `roster/index.ts` | `OperatorCard` `useTraitTooltip`（3 个函数） |
+| `formation/index.ts` | `TeamPanel` `resolveTeamVersionId` |
+| `library/index.ts` | `SavedTeamsPanel` `SaveTeamDialog` `useSavedTeams` |
+| `sharing/index.ts` | `ShareDialog` `ImportDialog` `useShareCode` |
+
+为什么不全量 `export *`：桶一旦把组件、composable、纯函数全放出去，任何 `import { x } from "@/features/x"` 都会把整个 feature 的副作用（`useGameVersion` 的模块级单例、组件里的 `onMounted`）拉进依赖图，测试里也不好 mock。**导出面按「现在真的有人用」定，多一个都不加。**
+
+配套加一条护栏（放进 `src/tests/domainBoundaries.spec.js` 或新建 `featureBoundaries.spec.js`）：扫源码里的 `@/features/<x>/...`，若 importer 属于另一个 feature 且路径不是 `@/features/<x>`（或 `/index`），断言失败。这条断言是 P5-b 唯一能防回退的东西。
+
+**验收**：`vue-tsc -b` / `vite build` / 209 绿；`npx eslint . --max-warnings 0`；护栏测试人为造一条深引应报红。
+**风险**：中低。桶文件本身不会引入环（依赖是链），但**桶里若导出组件，而组件又反向 import 另一个 feature 的桶**，就会形成 `index → Component → 对方 index` 的间接环；P5-b 要在 `app.smoke` 之外再跑一次 `vite build`，循环依赖在打包阶段才会暴露。
+
+---
+
+#### P5-c 拆分 `useModalState`
+
+**目标**：弹窗状态跟着使用者走，`App.vue` 不再从一个 21 项的大对象里挑 12 项。
+
+| 新模块 | 内容 | 依据 |
+| --- | --- | --- |
+| `app/useTeamDialog.js` | `showTeamModal` `editingTeam` `editingLocation` `openSaveTeamModal` `closeTeamModal` `editTeam` | 只服务保存 / 编辑编队弹窗；`SaveTeamDialog` 自己管输入，这里不需要 `teamName` / `selectedCollection` |
+| `features/sharing/composables/useShareDialogs.js` | `showShareModal` `showImportModal` `shareType` `shareCode` `currentShareTeam` `currentShareCollection` `openShareModal` `closeShareModal` `closeImportModal` | `openShareModal` 现在是 `App.vue` 里的普通函数，正好归位 |
+| `app/useToast.js` | `tempMessage` `showTempMessage` | 三个弹窗都要用，放 app 层；顺带补 `clearTimeout`（当前实现连续触发会留下多个 timer，后一个先到点就把新提示清了） |
+
+**注意**：`openShareModal` 里有「生成码为空则提示并返回」的判断，搬进 `useShareDialogs` 后它需要 `notify` 回调，**不要再让它 import `useToast` 单例**——保持「拒绝用返回值表达」的既定约定，由 `App.vue` 注入。
+
+`useModalState.js` 在本步结束时删除。
+
+**验收**：`grep -rn "useModalState" src` 为空；`app.smoke` 通过；新增 `useToast.spec.js`（假计时器：连续两次提示、卸载后不再写入）；209 → 212 左右。
+**风险**：中。三个弹窗的开闭分散到两个模块，漏接一个事件就是「点了没反应」，而现有测试对 `App.vue` 的弹窗覆盖只有冒烟级别。**这一步必须配手动走查**：保存 / 编辑 / 分享编队 / 分享合集 / 导入 / 满员提示 / 空编队提示，共 7 条路径。
+
+---
+
+#### P5-d `entities/` 拆分与 `versionAdapter` 退场
+
+**目标**：类型与实体访问器有明确归属，`src/domain/` 不再扮演「什么都能放的跨层垃圾桶」。
+
+```
+src/entities/
+├─ covenant.ts   CovenantEffect / Covenant
+├─ operator.ts   Trait / OperatorBase / OperatorInstance / TeamEntry
+│                 + getOperatorCovenants / getEffectiveOperatorCovenants /
+│                   getOperatorTier / getOperatorTraits / findOperatorEverywhere /
+│                   isSelfOperatorRegistered
+├─ equipment.ts  Equipment
+├─ team.ts       SavedTeam / TeamCollection / BanStrategy
+└─ version.ts    GameVersion / GameVersionLike
+```
+
+- `src/domain/types.ts` 删除，7 个引用点改指 `entities/*`
+- `src/domain/versionAdapter.ts` 删除：类型进 `entities/*`，访问器进 `entities/operator.ts`；`getGameVersion` / `getCovenantsByGroup` 继续留在 `data/versions.js`（它们只读注册表，不属于实体）
+- 依赖方向新增 `entities → data`（合法：实体访问器本来就要读数据集；`data` 不反向依赖 `entities`）
+- `domainBoundaries.spec.js` 的扫描范围要**排除** `entities/`——它不是纯函数区，允许 import `data` 与 `@/data/versions.js`
+
+**验收**：`grep -rn "versionAdapter\|domain/types" src` 为空；`vue-tsc -b` / 209 绿；`vite build` 通过。
+**风险**：低（改动面 13 个文件，全部是 import 重写与文件粘贴，无语义变化）。真正的风险是**判断错归属**：`GameVersionLike` 是给 data 层做结构约束的，若放 `entities` 会让 `data` 反向 import `entities`——所以 `data/versions.js` 里那份本地结构声明必须保留，不能改成 import 类型。
+
+---
+
+#### P5-e 删除 `covenant.operators`（M2）
+
+**目标**：消掉「同一事实存两处」的数据漂移源。
+
+- `covenants.mengyue.json` 23 处、`covenants.guicheng.json` 26 处，删掉每个阵营下的 `operators` 数组
+- 已确认运行时 0 读取：`grep "\.operators"` 命中的全是 `version.operators`（干员池），没有 `covenant.operators`
+- 不参与分享码与存档序列化，删除对历史数据无影响
+
+**验收**：`node scripts/gen-codebook.mjs` 输出「无新增」；209 绿；`grep -c '"operators"' covenants*.json` 为 0。
+**风险**：低。但**数据文件是人工校对产物**——删之前把 49 条 `operators` 导出成一份 `docs/` 之外的临时清单，确认没有校对流程在用它（例如拿它核对干员归属）。若你希望保留，可改为在字段名后加 `_note` 标注「仅供参考，勿读取」，但那是把问题往后推，不推荐。
+
+---
+
+#### P5-f 渐进类型化（只做两个试点）
+
+**目标**：验证「JS→TS 的边际收益」是否值得继续，而不是一次性重写。
+
+| 试点 | 理由 | 做法 |
+| --- | --- | --- |
+| `sharing/domain/shareCodec.js` → `.ts` | 全项目最需要类型的文件：位运算、varint、magic、72 字节阈值，且已有 4 条 v3 快照 + 历史码测试兜底 | 加类型标注，**不改任何位运算逻辑**；`pako` 类型已有 `@types/pako` |
+| `data/versions.js` 加 `// @ts-check` | 所有版本数据的唯一入口，字段拼错会静默返回 `undefined` | 先只加注释跑一次 `vue-tsc`，记录错误数；≤20 条就修完，>50 条就退回、只补 JSDoc |
+
+**明确不做**：12 个 composable 不转 TS。它们大量使用 `ref(null)` 再赋对象、动态属性访问，转 TS 会产生大量 `as any` 与可选链改写，收益低于风险；`@ts-check` 在 `.js` 里同样会因隐式 `any` 报错，属同一问题。
+
+**验收**：`vue-tsc -b` / 209 绿 / 构建通过；`.js` 数量 16 → 15（试点一）；`versions.js` 的错误清单写进本文件。
+**风险**：中。`shareCodec` 属计划第 12 节「不建议重构」的保护区——**只允许加类型与注释，一个表达式都不许动**；若类型标注迫使改写位运算，立即回退该文件。
+
+---
+
+#### P5-g 死导出清单与文档收尾
+
+- 出死导出清单：`knip` 未安装，`npx knip` 需要联网拉包。两条路：
+  - **装 `knip` 为 devDependency**（一次性，之后可作为 CI 检查）
+  - **人工清单**：按 feature 扫 `export`，逐个 `grep` 引用；本项目导出总量约 120 个，人工可做，但不可回归
+- 同步 `architecture/{overview,module-map,data-model}.md`：新增 `entities/` 层与 `entities → data` 边、桶文件的导出面、`useModalState` 拆成三个模块、`.js` 计数变化
+- `README` 的目录树补 `entities/`
+- `CHANGELOG` 新增 P5 段
+
+**验收**：`npm run lint`（0 warning）、`npm run test:run`（≥209）、`npm run build`、`node scripts/gen-codebook.mjs` 四项全过；文档中的模块名与磁盘一致（`grep` 校验）。
+
+---
+
+#### 提交拆分建议
+
+| # | 提交 | 内容 |
+| --- | --- | --- |
+| 1 | `refactor(app): 清理 App.vue 死绑定与两处 lint 警告` | P5-a |
+| 2 | `refactor(features): 为每个 feature 建立公开出口` | P5-b + 护栏测试 |
+| 3 | `refactor(app): 拆分 useModalState 为弹窗状态与提示` | P5-c |
+| 4 | `refactor(entities): 类型与实体访问器独立成层` | P5-d |
+| 5 | `chore(data): 删除 covenant.operators 冗余字段` | P5-e |
+| 6 | `refactor(types): shareCodec 转 TS，versions 加 ts-check` | P5-f |
+| 7 | `docs: 同步 P5 后的分层、目录与验收状态` | P5-g |
+
+第 1、3 条都改 `App.vue`，但改的是不同区域（解构 vs 弹窗接线），文件级可拆；若冲突则合并为一条并在正文分节说明（同 P3 的处理方式）。
+
+#### 明确不做
+
+| 项 | 理由 |
+| --- | --- |
+| 合并 `TraitTooltip` / `CovenantTooltip` 为 `TooltipHost` | P2 已论证：差异在内容装配，硬合等于把两个 `v-if` 塞进一个组件 |
+| 继续拆 `App.vue` 的组件 | 已是「三面板 + 弹窗」的组合根形态，再拆只是把 props 转手一次，TeamPanel 227 行同理 |
+| 12 个 composable 全量转 TS | 见 P5-f |
+| 引入 Pinia / vue-router / E2E | 第 12 节已否决 |
+| 改 `shareCodec` 的二进制布局 | 第 12 节：顺序与阈值即协议 |
+
+#### 已确认（3 项，2026-11-20）
+
+1. **P5-d 的边界**：`entities/` 只放类型与干员/盟约访问器，`GAME_VERSIONS` 注册表留在 `data/versions.js`；依赖只有 `entities → data` 一条边。
+2. **P5-e 的处理方式**：直接删 `covenant.operators` 49 处（删前导出临时清单备查）。
+3. **死导出检查**：装 `knip` 为 devDependency，跑一次出清单，后续可作 CI 检查。
 
 ---
 
