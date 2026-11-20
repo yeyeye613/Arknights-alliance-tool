@@ -130,15 +130,20 @@ npm run dev
 │  ├─ public/resource/image   # 干员头像、盟约与装备图标
 │  ├─ scripts/gen-codebook.mjs# 码表生成（只追加）
 │  └─ src
-│     ├─ components           # 页面组件与弹窗
-│     ├─ composables          # 响应式胶水：版本、编队、存储、分享、提示、PWA
-│     ├─ domain               # 纯业务规则（无 Vue、无 DOM，可直接单测）
-│     ├─ infrastructure       # 存储键、读写封装与仓储（存档格式的唯一出口）
+│     ├─ app                  # 组合根 App.vue、入口 main.ts、全局样式、模态状态
+│     ├─ features             # 按功能切分，组件 / composable / 领域规则 / 测试都在同一个 feature 下
+│     │  ├─ game-version      #   版本切换与版本上下文
+│     │  ├─ roster            #   干员池、筛选、干员卡、自选干员、特质浮层
+│     │  ├─ formation         #   当前编队、人数上限、槽位
+│     │  ├─ covenants         #   盟约统计、盟约栏与浮层
+│     │  ├─ equipment         #   装备池、临时装备池、选择器、装备规则
+│     │  ├─ library           #   已保存编队与合集
+│     │  └─ sharing           #   分享码编解码与导入导出
+│     ├─ domain               # 跨 feature 的类型与 data 适配层
+│     ├─ shared               # BaseModal、浮层控制器、图片地址
+│     ├─ infrastructure       # 存储键、读写封装、仓储与 PWA
 │     ├─ data                 # 版本注册表与各版本数据集
-│     ├─ utils                # 分享码编解码、图片地址
-│     ├─ tests                # Vitest 单测
-│     ├─ App.vue              # 组合根
-│     └─ main.ts              # 挂载入口
+│     └─ tests                # 跨 feature 集成：冒烟、分享码兼容、存档兼容、分层护栏
 ├─ architecture               # 架构文档
 ├─ docs/screenshots           # README 截图
 └─ .github/workflows/deploy.yml

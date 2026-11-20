@@ -2,8 +2,8 @@
 
 > 本文档基于对 46 个源文件的逐一阅读、脚本抽取的真实 import 图、以及针对数据一致性的脚本化核对，**不是**根据文件名或 README 推断。
 >
-> 状态：P0、P1、P2 已完成；P3 为待确认详案（见第 10 节）；P4–P5 为概要。
-> 最后更新：2026-11-17
+> 状态：P0–P4 已完成；P5 为概要（清理、类型化与跨 feature API 收口）。
+> 最后更新：2026-11-20
 
 ## 目录
 
@@ -122,7 +122,7 @@ flowchart TB
 
 ## 4. 问题清单与证据
 
-### 4.1 已完成（P0 / P1 / P2 / P3）
+### 4.1 已完成（P0 / P1 / P2 / P3 / P4）
 
 | # | 问题 | 处理方式 |
 | --- | --- | --- |
@@ -146,6 +146,9 @@ flowchart TB
 | S10 | composable 直接读写 3 个持久化键 | P3 收口到 `preferencesRepository`，`useGameVersion` / `usePoolFilters` / `useSelfOperators` 内已无存储细节 |
 | F2 | 领域层 / composable 直接 `alert` | P3 改为返回值（`addToTeam` / `openSaveTeamModal` 返回 `false`），提示与 `prompt` 归视图层 |
 | D5 | 合集用索引引用，重排即失效 | P3 改为合计名 + `teamIndex`；顺带修了三个真实缺陷（见 P3 偏差） |
+| S14 | 顶层按文件类型平铺（`components/` `composables/` `domain/` `utils/`），改一个功能要跨 4 个目录找文件 | P4 按功能重组为 `app/` + `features/*` + `shared/` + `infrastructure/`，测试跟着功能走；只移动与改 import，逻辑零改动 |
+| D6 | `data/equipment.js` 既读数据又 re-export 规则 | P4 删掉 re-export，调用方直连 `features/equipment/domain/equipRules` |
+| D7 | 数据集命名不对称（`covenants.json` vs `covenants.guicheng.json`、`selfOp.json`） | P4 改为 `covenants.mengyue.json` / `operators.mengyue.json` / `selfOperators.json`，同步 `versions.js` 与 `gen-codebook.mjs` |
 
 ### 4.2 待处理
 
@@ -153,9 +156,9 @@ flowchart TB
 | --- | --- | --- | --- |
 | D1 | 盟约 ↔ 干员双向引用已漂移（盟约版 15 处多出 / 11 处漏收） | 脚本比对 `covenant.operators` 与 `operator.covenants` | P5 |
 | D2 | `covenant.operators` 全仓无运行时读取，是脏数据 | `grep "\.operators"` 只命中 `version.operators` | P5 |
-| D3 | 干员实例 4 处各自拼装，字段不一致 | `PoolPanel.baseOperators` / `useSelfOperators` / `AddOpPanel` / `shareImport.restoreOperators` | P5 |
-| S11 | 业务逻辑全是 JS，`vue-tsc` 只覆盖 2 个文件 | 17 个 SFC 无 `lang="ts"` | P5（渐进 `@ts-check`） |
-| S13 | 业务文案散在领域层与视图层 | 「装备槽已满」在 `TeamPanel`；「最多 2 名」在 `AddOpPanel` | P5（P3 只处理了 alert/prompt，文案统一未做） |
+| D3 | 干员实例 4 处各自拼装，字段不一致 | `PoolPanel.baseOperators` / `useSelfOperators` / `SelfOperatorDialog` / `shareImport.restoreOperators` | P5 |
+| S11 | 业务逻辑全是 JS，`vue-tsc` 只覆盖 TS 文件 | 23 个 SFC 无 `lang="ts"`；P4 迁移脚本按扩展名保留 `.js`，未顺手改名 | P5（渐进 `@ts-check`） |
+| S13 | 业务文案散在领域层与视图层 | 「装备槽已满」在 `TeamPanel`；「最多 2 名」在 `SelfOperatorDialog` | P5（P3 只处理了 alert/prompt，文案统一未做） |
 
 ---
 
@@ -229,7 +232,9 @@ frontend/src/
 
 ## 6. 迁移对照表
 
-| 当前文件 | 目标位置 | 改动类型 |
+> 本表是迁移前的计划快照。**实际落地见第 10 节「P4 实际结果」**，两处差异是：`.js` 扩展名未改成 `.ts`、`entities/` 未建（均留 P5）。
+
+| 迁移前文件 | 目标位置 | 改动类型 |
 | --- | --- | --- |
 | `src/App.vue` | `app/App.vue` | 移动 + 瘦身（删剩余 9 个未用绑定） |
 | `src/main.ts`、`src/style.css` | `app/main.ts`、`app/styles/` | 移动 |
@@ -552,9 +557,48 @@ flowchart LR
 
 测试从 186 增至 **209**（22 个文件），`vue-tsc` / `vitest` / `eslint`（0 error）全部通过。
 
-### P4 目录迁移（概要）
+### P4 目录迁移（已完成）
 
-按第 5 / 6 节执行 `git mv` + 全量改 import + 加 `@/features/*` 别名 + `tests` 分置 + 更新 `gen-codebook.mjs` 与文档。**只做移动与路径，不带逻辑改动。**
+按第 5 / 6 节执行 `git mv` + 全量改 import + `tests` 分置 + 更新 `gen-codebook.mjs` 与文档。**只做移动与路径，不带逻辑改动。**
+
+#### 实际结果
+
+| 目标目录 | 内容 |
+| --- | --- |
+| `app/` | `App.vue`、`main.ts`、`styles/base.css`、`useModalState.js`、`tests/` |
+| `features/game-version/` | `VersionSwitch.vue`、`useGameVersion.js`、`tests/` |
+| `features/roster/` | 6 组件 + `filter-controls.css`、3 composable、`domain/filterOperators.ts`、4 测试 |
+| `features/formation/` | 4 组件、`useTeamManagement.js`、`domain/teamRules.ts`、2 测试 |
+| `features/covenants/` | 2 组件、2 composable、`domain/covenantStats.ts`、3 测试 |
+| `features/equipment/` | 3 组件、`useEquipmentDrag.js`、`domain/equipRules.ts`、3 测试 |
+| `features/library/` | 3 组件（含 `SaveTeamDialog`）、`useSavedTeams.js`、3 测试 |
+| `features/sharing/` | 2 组件（`ShareDialog` / `ImportDialog`）、`useShareCode.js`、`domain/shareCodec.js` + `domain/shareImport.ts`、1 测试 |
+| `shared/` | `BaseModal`、`PwaUpdatePrompt`、`useTooltip`、`lib/assets.js` |
+| `infrastructure/pwa/` | `usePwaUpdate.ts` |
+| `src/tests/` | 只留 `app.smoke` / `shareCompat` / `storageCompat` / `domainBoundaries` |
+
+验收：`vue-tsc -b`、`vite build`、`vitest`（209 绿）、`eslint`（0 error）全过；`node scripts/gen-codebook.mjs` 输出「无新增」，证明数据路径改对了。
+
+#### 偏差与未做项
+
+1. **文件扩展名一律没改**。计划树里写的是 `shared/lib/assets.ts`、`features/sharing/domain/shareCodec.ts`、`features/library/composables/useSavedTeams.ts` 等，实际按「只移动不改逻辑」保持 `.js`。`.js → .ts` 会连带改类型标注，属 P5 的类型化，不应混在迁移提交里。
+2. **`entities/` 没有建**。`versionAdapter.ts` + `types.ts` 计划拆成 `entities/operator.ts` 等，属「拆分」而非「移动」，留 P5；这两个文件暂时留在 `src/domain/`，作为跨 feature 的类型与 data 适配层。
+3. **features 之间仍是深引**。约束 2 要求跨 feature 走 `index.ts`，本次未加桶文件——加桶要先确认导出面，否则容易把组件连带进 composable 的依赖里。当前依赖方向是 `formation → roster → covenants → equipment → data`，无环。
+4. **`useModalState` 未拆三处**。它同时服务保存 / 分享 / 导入三个弹窗，计划里要拆成 library / sharing / shared 三份，属逻辑改动，与 `App.vue` 瘦身一起留 P5；本次只把它移到 `app/` 并当作应用级 UI 状态。
+5. **`TraitTooltip` / `CovenantTooltip` 未合并成 `TooltipHost`**。P2 已抽出公共的 `useTooltip`，两个组件的差异是内容装配（特质 vs 盟约效果），硬合并会变成一个大组件里塞 `v-if`；按 P2 的结论保留两个组件，分别归 roster / covenants。
+6. **`data/equipment.js` 保留在 `data/`**。它只做装备数据访问（`getEquipments` / `findEquipment` / `getEquipmentList` / `TIER_LABELS`），规则全部在 `features/equipment/domain/equipRules.ts`；没有再往 feature 里搬，因为 `data/versions.js` 也要读同一个数据集。
+7. **没加 `@/features/*` 别名**。`@` 已指向 `src`，`@/features/roster/...` 直接可用，再加一层别名只是多一份配置要同步。
+
+#### 迁移手法
+
+用一个一次性脚本（`scripts/p4-migrate.py`，跑完即删）做「先 `git mv` 全部文件、再统一重写 import」：
+
+- 映射表写死 74 条「旧路径（含扩展名）→ 新路径」，`git mv` 保证历史可追溯
+- 所有 `from "..."` / `import "..."` / `<style src="...">` 的说明符统一解析成 `src` 相对路径，查表后写成 `@/新路径`，不再留相对路径
+- 因为先移动后改写，文件里的相对路径还指向旧目录，脚本用反向映射找回移动前的 importer 目录作为解析基准
+- 干跑输出 0 条「未解析」才落盘；落盘后再干跑一次应为 0 改动（幂等）
+
+后续若要再调整目录，同样的手法可用：改映射表 → 干跑 → 落盘 → 四次校验。
 
 ### P5 清理与补齐（概要）
 
@@ -573,7 +617,7 @@ flowchart LR
 | P1 | `domain/` 0 个 `ref`/`import vue`；纯函数测试 ≥20（实际 80）；组件 script 下降；全量测试绿。**已达成** |
 | P2 | `.op-unit` 样式只存在一处（75px）；**现有测试不改断言全部通过（186 绿）**；`app.smoke` + `equipmentUi` 通过；`vue-tsc` / `vite build` / `eslint --max-warnings` 前的 0 error 全过；移动端 390×844 无横向溢出、折叠与筛选正常。**已达成**；原「单文件 ≤300 行」未达成，原因见 P2 偏差第 6 条 |
 | P3 | `grep -r localStorage src` 只命中 `infrastructure/storage`；`grep -rn "alert(\|prompt(" src` 只命中 `.vue`；新增「旧存档读取」用例；手动回归保存 / 编辑 / 移动 / 删除 / 导入。**已达成：209 绿**（手动回归三项由 `collectionRefs` / `savedTeamsPanel` / `useModalState` 用例代偿，真机走查仍待做一次） |
-| P4 | `npm run build`（含 `vue-tsc`）通过；`grep -r "@/data/operators.json" src/features` 为空；`preview` 手动走查全过 |
+| P4 | `npm run build`（含 `vue-tsc`）通过；`grep -r "@/data/operators.json" src/features` 为空；`preview` 手动走查全过。**已达成：209 绿 / 0 error / 构建通过**；手动走查待做一次 |
 | P5 | 无 dead export（`knip` 或人工清单）；README / architecture 与实际结构一致；测试 ≥200 |
 
 ---

@@ -36,7 +36,7 @@ erDiagram
 
 `selfOperatorStrategy` 的差异：
 
-- `direct`（盟约版）：直接采用 `selfOp.json` 里登记的核心盟约
+- `direct`（盟约版）：直接采用 `selfOperators.json` 里登记的核心盟约
 - `faction`（规程版）：用登记盟约去交集当前版本核心盟约；结果为空时归为 `协防干员`
 
 `banStrategy` 的差异：
@@ -84,7 +84,7 @@ erDiagram
 | `condition` | `string` | 可选。触发条件，如 `在场6名不同的【炎】干员`、`每叠加25层` |
 | `description` | `string` | 效果正文，`×层数` 为占位写法，不做数值计算 |
 
-**进阶等级是从 `condition` 反推的**：`useCovenantStats.js` 用正则 `/^在场(\d+)名不同/` 提取阈值，按当前人数满足几个阈值即为几级。因此该句式属于**隐性契约**——改文案时若破坏句式，进阶展示会静默失效。
+**进阶等级是从 `condition` 反推的**：`features/covenants/composables/useCovenantStats.js` 用正则 `/^在场(\d+)名不同/` 提取阈值，按当前人数满足几个阈值即为几级。因此该句式属于**隐性契约**——改文案时若破坏句式，进阶展示会静默失效。
 
 ### 3. 干员（`operators*.json`）
 
@@ -150,13 +150,13 @@ erDiagram
 
 `combo` 与 `parts` 是同一关系的两侧：原料件写 `combo: 成品名`，成品件写 `parts: [原料…]`。运行时只用 `parts` 做「是否凑齐」判定。
 
-### 5. 自选干员（`selfOp.json`）
+### 5. 自选干员（`selfOperators.json`）
 
 ```json
 { "陈": { "tier": "", "covenants": ["炎"], "traits": [] } }
 ```
 
-结构与 `operators*.json` 的条目**完全一致**，但它是**跨版本的补丁层**：这些干员不在任一版本的干员池里，出战时通过 `isSelfOperator: true` 标记，盟约与阶数按当前版本的 `selfOperatorStrategy` 推断。五阶、六阶各最多选 2 名（由 `AddOpPanel.vue` 约束）。
+结构与 `operators*.json` 的条目**完全一致**，但它是**跨版本的补丁层**：这些干员不在任一版本的干员池里，出战时通过 `isSelfOperator: true` 标记，盟约与阶数按当前版本的 `selfOperatorStrategy` 推断。五阶、六阶各最多选 2 名（由 `features/roster/components/SelfOperatorDialog.vue` 约束）。
 
 ### 6. 码表（`opCodebook.json` / `equipCodebook.json`）
 
@@ -208,8 +208,8 @@ erDiagram
 
 | 键 | 内容 | 仓储 / 写入方 |
 | --- | --- | --- |
-| `arknights_saved_teams` | `SavedTeam[]`（未归类） | `teamsRepository.saveTeams` ← `useTeamStorage` |
-| `arknights_team_collections` | `TeamCollection[]`（已剥离 `expanded`） | `teamsRepository.saveCollections` ← `useTeamStorage` |
+| `arknights_saved_teams` | `SavedTeam[]`（未归类） | `teamsRepository.saveTeams` ← `useSavedTeams` |
+| `arknights_team_collections` | `TeamCollection[]`（已剥离 `expanded`） | `teamsRepository.saveCollections` ← `useSavedTeams` |
 | `arknights_game_version` | 版本 id 字符串 | `preferencesRepository.setVersionId` ← `useGameVersion` |
 | `arknights_selected_self_operators` | `{ name, tier, avatar, isSelfOperator }[]` | `preferencesRepository.setSelfOperators` ← `useSelfOperators` |
 | `arknights_pool_filter_view` | `icon` \| `text` | `preferencesRepository.setFilterView` ← `usePoolFilters` |
@@ -307,5 +307,5 @@ erDiagram
 | 干员新增 `traits` 类别 | 无需改代码，筛选选项自动推导；建议补测试断言存在该类别 |
 | 盟约新增 `effects.type` | 检查 `CovenantTooltip.vue` 的 `typeClass` 映射，未命中会落到默认样式 |
 | 干员新增字段并要进分享码 | `shareCodec.js` 的 `writeOperator` / `readOperator` + 开新 magic（不能复用 `0xc0`） |
-| 编队新增字段并要落库 | `useTeamStorage.js` 的 `saveTeam` / `updateTeam` + 兼容旧存档的读取兜底 |
+| 编队新增字段并要落库 | `useSavedTeams.js` 的 `saveTeam` / `updateTeam` + 兼容旧存档的读取兜底 |
 | 新增持久化键 | 本节表格 + `CONTRIBUTING.md` 的分层约定（只允许 composable 写） |

@@ -31,19 +31,19 @@ npm run coverage   # 覆盖率报告（当前只测量，不设阈值）
 | 层 | 目录 | 允许做 | 禁止做 |
 | --- | --- | --- | --- |
 | 数据层 | `src/data` | 版本注册、数据集、纯函数式数据访问 | 读写 `localStorage`、引用 Vue 组件 |
-| 领域层 | `src/domain` | 纯业务规则：统计、筛选、Ban、上限、编解码映射 | `import vue`、读写 `localStorage`、调用 `alert/prompt/confirm`、碰 DOM |
-| 响应式层 | `src/composables` | 把 ref 变成 computed、调用仓储、副作用 | 写业务规则（规则应放 `domain` 并单测）、直接读写 `localStorage`、调用 `alert/prompt/confirm` |
+| 领域层 | `src/features/*/domain`、`src/domain` | 纯业务规则：统计、筛选、Ban、上限、编解码映射；按功能就近放，跨 feature 的类型与 data 适配留在 `src/domain` | `import vue`、读写 `localStorage`、调用 `alert/prompt/confirm`、碰 DOM、反向 import `components` / `composables` |
+| 响应式层 | `src/features/*/composables`、`src/app` | 把 ref 变成 computed、调用仓储、副作用 | 写业务规则（规则应放 `domain` 并单测）、直接读写 `localStorage`、调用 `alert/prompt/confirm` |
 | 基础设施层 | `src/infrastructure` | 存储键常量、读写封装、按用途分组的仓储 | 判断数据是否合法（版本 id / 自选干员校验留在 composable）、引用 `composables` 或 `components` |
-| 视图层 | `src/components` | 渲染、交互、事件上抛、需要用户输入的询问（`prompt`）与提示文案 | 直接 `localStorage.setItem`、内联版本判断 |
+| 视图层 | `src/features/*/components`、`src/shared/components` | 渲染、交互、事件上抛、需要用户输入的询问（`prompt`）与提示文案 | 直接 `localStorage.setItem`、内联版本判断 |
 
 
 补充约定：
 
 - 组件不直接读版本数据文件，统一走 `useGameVersion()` 或 `data/versions.js` 的导出函数
-- 新增规则时：先写 `domain` 纯函数 → 在 `src/tests/domain.*.spec.js` 补用例 → 再由 composable / 组件调用
-- 组件不自己拼图片路径，统一用 `utils/index.js` 的 `getAvatarUrl` / `getIconUrl` / `getEquipmentIconUrl`
+- 新增规则时：先写 `features/<feature>/domain` 纯函数 → 在同目录 `tests/` 补用例 → 再由 composable / 组件调用
+- 组件不自己拼图片路径，统一用 `shared/lib/assets.js` 的 `getAvatarUrl` / `getIconUrl` / `getEquipmentIconUrl`
 - 只有 `App.vue` 作为组合根串联各 composable，子组件通过 props / emits 通信
-- 新增跨组件共享状态时，优先在 `composables` 里做模块级单例（参考 `useGameVersion.js`）
+- 新增跨组件共享状态时，优先在对应 feature 的 `composables` 里做模块级单例（参考 `game-version/composables/useGameVersion.js`）
 - 需要跨模块写状态时用回调注入（参考 `useShareCode().importFromCode(data, { addTeam, addCollection })`），不要把别人的 ref 传进函数里 push
 
 ## 提交规范
@@ -128,7 +128,7 @@ refactor(roster): 提取干员筛选逻辑
 
 ## 测试
 
-- 新增业务规则：写到 `src/domain/`，并在 `src/tests/domain.<模块>.spec.js` 补用例（纯函数，不用 mount 组件）
+- 新增业务规则：写到对应 feature 的 `domain/`，并在同 feature 的 `tests/domain.<模块>.spec.js` 补用例（纯函数，不用 mount 组件）
 - 新增 composable / 数据访问函数：补对应单测
 - 修 bug：先写能复现的断言，再改代码
 - 涉及导出的 UI 交互（拖拽、装备角标、筛选）可参考 `equipmentUi.spec.js` 的写法

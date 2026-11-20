@@ -18,7 +18,7 @@
 - `useShareCode().shareTeam / shareCollection` 移除，分享弹窗状态改由 `App.vue` 组装
 - `useTeamStorage().saveTeam / updateTeam` 去掉未使用的 `team` 参数（改从 `teamData.team` 取值）
 - 盟约统计合并为单次遍历（原先同一编队扫两遍、每名干员的盟约解析重复计算）
-- `data/equipment.js` 只保留数据访问，规则部分 re-export 自 `domain/equipRules`（过渡用，P4 删除）
+- `data/equipment.js` 只保留数据访问，规则部分 re-export 自 `domain/equipRules`（过渡用，P4 已删除）
 
 #### P2 组件拆分
 
@@ -49,6 +49,19 @@
 - 保存编队时选第一个合集会落到「不归类」（`index || null` 把 `0` 当成空值）
 - 合集内「移动到合集」实际是复制：源合集没有移除条目，还会把未分类列表里同序号的编队一起搬走
 
+#### P4 目录迁移
+
+按功能重组源码目录，**只移动文件与改写 import，逻辑零改动**。存档键名、分享码协议、组件行为均不变：
+
+- 顶层从「按文件类型平铺」改为「按功能切分」：`app/`（组合根、入口、全局样式、模态状态）、`features/*`（roster / formation / covenants / equipment / library / sharing / game-version）、`shared/`（弹窗骨架、浮层控制器、图片地址）、`infrastructure/`（storage + pwa）
+- 每个 feature 自带 `components/` `composables/` `domain/` `tests/`；领域文件从集中的 `src/domain/` 分散到各 feature，`src/domain/` 只留跨 feature 的 `versionAdapter.ts` 与 `types.ts`
+- 测试跟着功能走：18 个用例文件迁到对应 feature 的 `tests/`，`src/tests/` 只留冒烟、分享码兼容、存档兼容与分层护栏
+- 改名：`AddOpPanel` → `SelfOperatorDialog`、`ShareModal` → `ShareDialog`、`ImportModal` → `ImportDialog`、`SaveTeamModal` → `SaveTeamDialog`、`useTeamStorage` → `useSavedTeams`
+- 数据集命名对齐：`covenants.json` → `covenants.mengyue.json`、`operators.json` → `operators.mengyue.json`、`selfOp.json` → `selfOperators.json`；`versions.js` 与 `scripts/gen-codebook.mjs` 同步
+- `data/equipment.js` 删掉对 `equipRules` 的 re-export，只保留装备数据访问（`TIER_LABELS` / `getEquipments` / `findEquipment` / `getEquipmentList`）
+- `src/tests/domainBoundaries.spec.js` 改为递归扫描所有名为 `domain` 的目录，不再写死单一路径
+- 覆盖率配置的排除项补 `src/**/tests/**`，避免用例被算进源码分母
+
 ### 移除
 
 - 全量导出（`generateFullCode` / `encodeFull` / `ARKFULL` 前缀 / v3 `type=3` 解码分支）：从未上线 UI，也无历史码
@@ -64,7 +77,7 @@
 - 新增 `storageCompat.spec.js`（7 条）：旧存档逐字读回、`expanded` 重置与剥离、键名不变、损坏与非法结构回退
 - 新增 `collectionRefs.spec.js`（4 条）与 `savedTeamsPanel.spec.js`（5 条）：合集按名字定位、移动不误伤未分类列表，先红后绿
 - 新增 `useTeamManagement.spec.js`（4 条）、`useModalState.spec.js`（3 条）：记录「用返回值而不是对话框表达拒绝」的契约
-- P0–P1 累计 87 → 186，P3 后 186 → 209
+- P0–P1 累计 87 → 186，P3 后 186 → 209（P4 只搬目录，用例数与断言不变）
 
 ### 工程
 

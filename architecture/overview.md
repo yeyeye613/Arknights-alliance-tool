@@ -21,74 +21,62 @@
 
 ```mermaid
 flowchart TB
-  subgraph VIEW["视图层 · src/components"]
+  subgraph APP["app · 组合根"]
     direction LR
-    APP["App.vue<br/>组合根"]
-    POOL["PoolPanel<br/>干员池"]
-    TEAM["TeamPanel<br/>当前编队"]
-    SAVED["SavedTeamsPanel<br/>已保存编队"]
-    EQUIP["EquipmentPool / Staging / Picker<br/>装备三件套"]
-    COV["CovenantsPanel<br/>盟约效果"]
-    MODAL["Save / Share / Import / AddOp<br/>弹窗"]
-    TIP["TraitTooltip / CovenantTooltip<br/>全局浮层"]
-    SUB["PoolFilters / OperatorCard<br/>TeamHeader / OperatorSlot<br/>ActiveEffectsList / TeamCard<br/>P2 拆出的组合块"]
+    A["App.vue<br/>三块面板 + 弹窗"]
+    MAIN["main.ts<br/>挂载 + SW"]
+    MS["useModalState<br/>弹窗 / 提示"]
   end
 
-  subgraph DOMAIN["领域层 · src/domain（纯函数）"]
+  subgraph FEAT["features/*（按功能切分）"]
     direction LR
-    CS["covenantStats<br/>盟约统计"]
-    FLT["filterOperators<br/>筛选与 Ban"]
-    TR["teamRules<br/>上限 / 跨版本 / 版本回退"]
-    ER["equipRules<br/>槽位 / 变形同构体"]
-    SI["shareImport<br/>分享码解析与映射"]
-    VA["versionAdapter<br/>data 适配层"]
+    GV["game-version<br/>版本单例"]
+    RS["roster<br/>池 / 筛选 / 干员卡"]
+    FM["formation<br/>当前编队"]
+    CV["covenants<br/>统计 / 盟约栏"]
+    EQ["equipment<br/>装备三件套"]
+    LB["library<br/>已保存编队"]
+    SH["sharing<br/>分享码"]
   end
 
-  subgraph COMPOSABLE["响应式层 · src/composables"]
+  subgraph SHARED["shared"]
     direction LR
-    GV["useGameVersion<br/>版本单例"]
-    TM["useTeamManagement<br/>当前编队"]
-    TS["useTeamStorage<br/>本地存储"]
-    SC["useShareCode<br/>分享与导入"]
-    CSW["useCovenantStats<br/>盟约统计的 computed"]
-    MS["useModalState<br/>弹窗与提示"]
-    PWA["usePwaUpdate<br/>SW 注册"]
-    DRAG["useEquipmentDrag<br/>拖拽载荷"]
-    PF["usePoolFilters<br/>筛选状态"]
-    SO["useSelfOperators<br/>自选干员"]
-    TT["useTooltip<br/>浮层公共实现"]
+    BASE["BaseModal"]
+    TIP["useTooltip"]
+    IMG["lib/assets"]
+    PWAUI["PwaUpdatePrompt"]
   end
 
-  subgraph DATA["数据层 · src/data"]
+  subgraph DOM["domain（跨 feature）"]
+    direction LR
+    VA["versionAdapter<br/>data 适配"]
+    TYPES["types.ts"]
+  end
+
+  subgraph INFRA["infrastructure"]
+    direction LR
+    KEYS["storage/keys.ts"]
+    LSTORE["storage/localStore.ts"]
+    RT["storage/teamsRepository"]
+    RP["storage/preferencesRepository"]
+    PWASW["pwa/usePwaUpdate"]
+  end
+
+  subgraph DATA["data"]
     direction LR
     REG["versions.js<br/>版本注册表"]
-    EQ["equipment.js<br/>装备数据访问"]
-    JSON["*.json<br/>盟约 / 干员 / 装备 / 自选 / 码表"]
+    EQD["equipment.js<br/>装备数据访问"]
+    JSON["*.json<br/>数据集 / 码表"]
   end
 
-  subgraph UTIL["工具层 · src/utils"]
-    direction LR
-    CODEC["shareCodec.js<br/>v3 二进制编解码"]
-    IMG["index.js<br/>图片地址"]
-  end
-
-  subgraph INFRA["基础设施层 · src/infrastructure/storage"]
-    direction LR
-    KEYS["keys.ts<br/>键名常量（值冻结）"]
-    LSTORE["localStore.ts<br/>JSON / 文本读写与兜底"]
-    RT["teamsRepository.ts<br/>编队与合集"]
-    RP["preferencesRepository.ts<br/>版本 / 筛选 / 自选干员"]
-  end
-
-  VIEW --> COMPOSABLE
-  COMPOSABLE --> DOMAIN
-  COMPOSABLE --> DATA
-  COMPOSABLE --> INFRA
-  DOMAIN --> DATA
-  DOMAIN --> UTIL
-  VIEW --> UTIL
+  APP --> FEAT
+  FEAT --> SHARED
+  FEAT --> DOM
+  FEAT --> INFRA
+  FEAT --> DATA
+  DOM --> DATA
   DATA --> JSON
-  DATA --> EQ
+  DATA --> EQD
   RT --> LSTORE
   RP --> LSTORE
   RT --> KEYS
@@ -100,14 +88,15 @@ flowchart TB
 
 ### 依赖规则
 
-1. **视图层不碰数据文件**。组件通过 `useGameVersion()` 拿到当前版本的 `covenants` / `operators`，或调用 `data/versions.js` 的解析函数；不 `import` 任何 `*.json`。已知例外只有 `AddOpPanel` 直接读 `selfOp.json`（自选池候选列表），待 P4 收敛到访问器。
+1. **视图层不碰数据文件**。组件通过 `useGameVersion()` 拿到当前版本的 `covenants` / `operators`，或调用 `data/versions.js` 的解析函数；不 `import` 任何 `*.json`。已知例外只有 `features/roster/components/SelfOperatorDialog.vue` 直接读 `selfOperators.json`（自选池候选列表），待收敛到访问器。
 2. **视图层与 composable 都不碰 `localStorage`**。持久化统一走 `src/infrastructure/storage`：composable 调仓储（`teamsRepository` / `preferencesRepository`），仓储调 `localStore`，键名只出现在 `keys.ts`。P3 之后 `src` 内除 `infrastructure/` 只剩 `tests/` 还会出现这个词。
 3. **领域层不碰 DOM**。`useTraitTooltip` / `useCovenantTooltip` 持有的是浮层的坐标与内容状态，真正挂载由组件 `teleport` 到 `body` 完成。
-4. **`src/domain` 是纯函数区**。统计、筛选、Ban、上限、装备规则、分享码映射都在这里，不 `import vue`、不读写 `localStorage`、不调 `alert`，由 `src/tests/domainBoundaries.spec.js` 读源码校验。它只允许依赖 `data/` 与 `utils/`，不允许反向依赖 `components` / `composables`。
-5. **工具层无状态**。`shareCodec.js` 是纯函数集合，可脱离 Vue 单独测试。
-6. **唯一组合根是 `App.vue`**。所有 composable 在此实例化，结果通过 props 下发、通过 emits 上抛；需要写别的模块的状态时用回调注入（如 `importFromCode(data, { addTeam })`），不传 ref 进去 push。
-7. **基础设施层只依赖 `data/` 与同层文件**，不 import `composables` / `components`。它只回答「怎么存取」，不回答「数据合不合法」——版本 id 是否注册、自选干员阶数是否有效，仍是 composable 的判断。
+4. **每个 feature 的 `domain/` 是纯函数区**。统计、筛选、Ban、上限、装备规则、分享码映射都在这里，不 `import vue`、不读写 `localStorage`、不调 `alert`。P4 之后领域文件分散在 `src/domain/` 与 `src/features/*/domain/`，`src/tests/domainBoundaries.spec.js` 递归扫描目录名 `domain` 后读源码校验。
+5. **`shared` 与 `infrastructure` 不依赖 `features`**。`shared` 放无业务含义的通用件（弹窗骨架、浮层控制器、图片地址），`infrastructure` 放与浏览器打交道的东西（存储、Service Worker）。
+6. **唯一组合根是 `app/App.vue`**。所有 composable 在此实例化，结果通过 props 下发、通过 emits 上抛；需要写别的模块的状态时用回调注入（如 `importFromCode(data, { addTeam })`），不传 ref 进去 push。
+7. **基础设施层不判断数据合法性**。它只回答「怎么存取」——版本 id 是否注册、自选干员阶数是否有效，仍是 composable 的判断。
 8. **composable 不弹对话框**。满员、空编队这类拒绝用返回值表达（`addToTeam` / `openSaveTeamModal` 返回 `boolean`），提示文案与 `prompt` 询问留在视图层，这样 composable 可以在没有 DOM 的环境里直接测。
+9. **features 之间目前是深引**。`formation → roster → covenants → equipment`、所有 feature → `game-version`，方向单一且无环，但尚未收口到 `features/x/index.ts`。这是 P4 的已知未完成项，记在 [refactoring-plan.md](../docs/architecture/refactoring-plan.md) 的 P5。
 
 ## 关键设计决策
 
@@ -163,19 +152,20 @@ flowchart LR
 
 ## 质量保障
 
-约 11 个 Vitest 测试文件，覆盖重心在「最容易静默出错」的地方：
+**209 条用例 / 22 个文件**（`npm run test:run`），覆盖重心在「最容易静默出错」的地方：
 
-| 测试 | 关注点 |
-| --- | --- |
-| `useShareCode.spec.js` | 编解码往返、版本标识、装备字段、旧码兼容 |
-| `useTeamStorage.spec.js` | 存储初始化、保存、移动、删除 |
-| `useCovenantStats.spec.js` | 层数统计、激活判定、进阶等级 |
-| `gameVersion.spec.js` | 两版本数据完整性、核心盟约数量、跨版本查找 |
-| `equipment.spec.js` | 装备池完整性、变形同构体规则、槽位上限 |
-| `equipmentUi.spec.js` | 装备选择器、角标、拖拽、临时装备池、标签页 |
-| `poolFilter.spec.js` / `mobilePool.spec.js` | 筛选与 Ban 策略、移动端折叠 |
-| `traitTooltip.spec.js` / `covenantTooltip.spec.js` | 浮层内容与版本联动 |
-| `app.smoke.spec.js` | 整体渲染与版本切换冒烟 |
+| 测试 | 位置 | 关注点 |
+| --- | --- | --- |
+| `shareCompat` / `useShareCode` | `src/tests` / `features/sharing` | v3 快照、旧码兼容、编解码往返 |
+| `storageCompat` | `src/tests` | 旧存档逐字读回、键名不变、损坏回退 |
+| `domainBoundaries` | `src/tests` | 领域层不碰 Vue / 存储 / 对话框 / 视图层 |
+| `app.smoke` | `src/tests` | 整体渲染与版本切换冒烟 |
+| `domain.*` | 各 feature | 统计、筛选、上限、装备、分享码映射的纯函数 |
+| `poolFilter` / `mobilePool` | `features/roster` | 筛选与 Ban 策略、移动端断点 |
+| `traitTooltip` / `covenantTooltip` | roster / covenants | 浮层内容与版本联动 |
+| `equipment` / `equipmentUi` | `features/equipment` | 装备池完整性、变形同构体、选择器与拖拽 |
+| `collectionRefs` / `savedTeamsPanel` | `features/library` | 合集按名字定位、移动不误伤 |
+| `gameVersion` | `features/game-version` | 两版本数据完整性、跨版本查找 |
 
 没有 E2E：交互密集的拖拽场景用组件级测试覆盖，样式与布局问题靠人工在 `≤1024px` / `≤768px` 两档回归。
 
@@ -192,8 +182,8 @@ flowchart LR
 
 | 想做的事 | 落点 |
 | --- | --- |
-| 新增赛季 | `data/` 加数据集 → `versions.js` 注册 → `shareCodec.js` 追加 `VERSION_CODES` |
-| 新增装备 | `equipment.<id>.json` → `npm run codebook` → 补 `equipment.spec.js` |
-| 新增筛选维度 | `PoolPanel.vue` 的 `activeFilterList` / `filteredPool` |
-| 新增分享内容 | `shareCodec.js` 开新 magic + 新 type，旧解码器判无效 |
-| 新增统计规则 | `useCovenantStats.js`，优先写成独立纯函数便于测试 |
+| 新增赛季 | `data/` 加数据集（`operators.<id>.json` / `covenants.<id>.json`）→ `versions.js` 注册 → `shareCodec.js` 追加 `VERSION_CODES` |
+| 新增装备 | `data/equipment.<id>.json` → `npm run codebook` → 补 `features/equipment/tests/equipment.spec.js` |
+| 新增筛选维度 | `features/roster`：`usePoolFilters` 的状态 + `PoolFilters` 的控件 + `domain/filterOperators` 的匹配 |
+| 新增分享内容 | `features/sharing/domain/shareCodec.js` 开新 magic + 新 type，旧解码器判无效 |
+| 新增统计规则 | `features/covenants/domain/covenantStats.ts`（纯函数 + 单测），再由 `useCovenantStats` 包成 computed |

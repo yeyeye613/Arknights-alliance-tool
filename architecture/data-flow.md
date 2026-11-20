@@ -9,10 +9,10 @@
 ```mermaid
 sequenceDiagram
   participant U as 用户
-  participant M as main.ts
-  participant A as App.vue
+  participant M as app/main.ts
+  participant A as app/App.vue
   participant GV as useGameVersion
-  participant TS as useTeamStorage
+  participant TS as useSavedTeams
   participant PWA as usePwaUpdate
 
   U->>M: 打开页面
@@ -40,7 +40,7 @@ sequenceDiagram
   participant U as 用户
   participant VS as VersionSwitch
   participant GV as useGameVersion
-  participant A as App.vue
+  participant A as app/App.vue
   participant P as PoolPanel
   participant T as TeamPanel
   participant S as SavedTeamsPanel
@@ -75,7 +75,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-  CLICK["点击干员卡片<br/>或从池中拖入"] --> ADD["useTeamManagement.addToTeam<br/>超上限则 alert"]
+  CLICK["点击干员卡片<br/>或从池中拖入"] --> ADD["useTeamManagement.addToTeam<br/>超上限返回 false，App.vue 提示"]
   ADD --> TEAM["team: Ref<TeamOperator[]>"]
   TEAM --> BASE["countBaseCovenants<br/>按名字去重"]
   BASE --> EFF["getEffectiveOperatorCovenants<br/>= 基础盟约 + 变形同构体"]
@@ -108,7 +108,7 @@ sequenceDiagram
   participant U as 用户
   participant EP as EquipmentPool
   participant ST as EquipmentStaging
-  participant A as App.vue
+  participant A as app/App.vue
   participant TP as TeamPanel
   participant EQ as data/equipment.js
   participant PK as EquipmentPicker
@@ -153,14 +153,14 @@ sequenceDiagram
 sequenceDiagram
   participant U as 用户
   participant TP as TeamPanel
-  participant A as App.vue
+  participant A as app/App.vue
   participant MS as useModalState
-  participant SM as SaveTeamModal
-  participant TS as useTeamStorage
+  participant SM as SaveTeamDialog
+  participant TS as useSavedTeams
 
   U->>TP: 点击「保存编队」
   TP->>A: emit save-team
-  A->>MS: openSaveTeamModal(team)
+  A->>MS: openSaveTeamDialog(team)
   alt 编队为空
     MS-->>A: false
     A->>U: showTempMessage("当前编队为空，无法保存")
@@ -183,7 +183,7 @@ sequenceDiagram
 sequenceDiagram
   participant U as 用户
   participant S as SavedTeamsPanel
-  participant A as App.vue
+  participant A as app/App.vue
   participant GV as useGameVersion
   participant TM as useTeamManagement
 
@@ -208,10 +208,10 @@ sequenceDiagram
 sequenceDiagram
   participant U as 用户
   participant S as SavedTeamsPanel
-  participant A as App.vue
+  participant A as app/App.vue
   participant SC as useShareCode
   participant CD as shareCodec
-  participant M as ShareModal
+  participant M as ShareDialog
 
   U->>S: 点击编队「分享」
   S->>A: emit shareTeam(teamItem)
@@ -224,7 +224,7 @@ sequenceDiagram
   CD->>CD: 整体 Base62，前缀 "A"
   CD-->>SC: 分享码
   SC-->>A: code
-  A->>M: openShareModal → shareCode / showShareModal = true
+  A->>M: openShareDialog → shareCode / showShareDialog = true
   M-->>U: 自动全选，可一键复制
 ```
 
@@ -235,12 +235,12 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
   participant U as 用户
-  participant IM as ImportModal
+  participant IM as ImportDialog
   participant SC as useShareCode
   participant CD as shareCodec
-  participant A as App.vue
+  participant A as app/App.vue
   participant GV as useGameVersion
-  participant TS as useTeamStorage
+  participant TS as useSavedTeams
 
   U->>IM: 粘贴分享码
   IM->>SC: parseCode(raw)
