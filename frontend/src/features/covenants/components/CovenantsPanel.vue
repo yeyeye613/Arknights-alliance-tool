@@ -47,7 +47,7 @@
 </template>
 
 <script setup>
-  import { useGameVersion } from "@/features/game-version/composables/useGameVersion.js";
+  import { useGameVersion } from "@/features/game-version";
   import { handleImgError, getIconUrl } from "@/shared/lib/assets.js";
   import {
     showCovenantTooltip,

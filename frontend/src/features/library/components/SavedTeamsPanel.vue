@@ -121,7 +121,7 @@
 <script setup>
   import { computed, ref } from "vue";
   import { DEFAULT_VERSION_ID } from "@/data/versions.js";
-  import { resolveTeamVersionId } from "@/features/formation/domain/teamRules";
+  import { resolveTeamVersionId } from "@/features/formation";
   import TeamCard from "@/features/library/components/TeamCard.vue";
 
   const props = defineProps({

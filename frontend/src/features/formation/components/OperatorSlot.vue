@@ -47,8 +47,8 @@
 <script setup>
   import { computed } from "vue";
 
-  import OperatorCard from "@/features/roster/components/OperatorCard.vue";
-  import { getOperatorEquipmentNames } from "@/features/equipment/domain/equipRules";
+  import { OperatorCard } from "@/features/roster";
+  import { getOperatorEquipmentNames } from "@/features/equipment";
   import { getEquipmentIconUrl, handleImgError } from "@/shared/lib/assets.js";
 
   /**

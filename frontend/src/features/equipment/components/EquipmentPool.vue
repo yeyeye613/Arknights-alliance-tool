@@ -77,7 +77,7 @@
 
 <script setup>
   import { computed, ref } from "vue";
-  import { useGameVersion } from "@/features/game-version/composables/useGameVersion.js";
+  import { useGameVersion } from "@/features/game-version";
   import {
     TIER_LABELS,
     getEquipmentList,

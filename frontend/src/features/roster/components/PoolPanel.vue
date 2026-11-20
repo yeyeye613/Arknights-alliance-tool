@@ -86,7 +86,7 @@
   import OperatorCard from "@/features/roster/components/OperatorCard.vue";
   import PoolFilters from "@/features/roster/components/PoolFilters.vue";
   import { getOperatorCovenants, getOperatorTraits } from "@/data/versions.js";
-  import { useGameVersion } from "@/features/game-version/composables/useGameVersion.js";
+  import { useGameVersion } from "@/features/game-version";
   import { usePoolFilters } from "@/features/roster/composables/usePoolFilters.js";
   import { useSelfOperators } from "@/features/roster/composables/useSelfOperators.js";
   import { filterOperators, resolveTier } from "@/features/roster/domain/filterOperators";
@@ -99,7 +99,7 @@
     hideCovenantTooltip,
     moveCovenantTooltip,
     showCovenantTooltip,
-  } from "@/features/covenants/composables/useCovenantTooltip.js";
+  } from "@/features/covenants";
   import { getAvatarUrl } from "@/shared/lib/assets.js";
 
   const {

@@ -72,24 +72,25 @@
 <script setup>
   import { computed, ref, toRef } from "vue";
   import { VueDraggable } from "vue-draggable-plus";
-  import CovenantsPanel from "@/features/covenants/components/CovenantsPanel.vue";
-  import EquipmentPicker from "@/features/equipment/components/EquipmentPicker.vue";
+  import { CovenantsPanel, useCovenantStats } from "@/features/covenants";
+  import {
+    EQUIPMENT_SLOT_COUNT,
+    EquipmentPicker,
+    equipToOperator,
+    getOperatorEquipmentNames,
+    hasEquipmentDrag,
+    hasEquipmentPool,
+    readEquipmentDrag,
+    removeOperatorEquipment,
+  } from "@/features/equipment";
   import TeamHeader from "@/features/formation/components/TeamHeader.vue";
   import OperatorSlot from "@/features/formation/components/OperatorSlot.vue";
   import ActiveEffectsList from "@/features/formation/components/ActiveEffectsList.vue";
-  import { useCovenantStats } from "@/features/covenants/composables/useCovenantStats.js";
-  import { useGameVersion } from "@/features/game-version/composables/useGameVersion.js";
+  import { useGameVersion } from "@/features/game-version";
   import {
     getEffectiveOperatorCovenants,
     getOperatorTraits,
   } from "@/data/versions.js";
-  import {
-    EQUIPMENT_SLOT_COUNT,
-    equipToOperator,
-    getOperatorEquipmentNames,
-    hasEquipmentPool,
-    removeOperatorEquipment,
-  } from "@/features/equipment/domain/equipRules";
   import {
     countMissingOperators,
     exceedsTeamLimit,
@@ -97,14 +98,10 @@
     truncateToLimit,
   } from "@/features/formation/domain/teamRules";
   import {
-    hasEquipmentDrag,
-    readEquipmentDrag,
-  } from "@/features/equipment/composables/useEquipmentDrag.js";
-  import {
     hideTraitTooltip,
     moveTraitTooltip,
     showTraitTooltip,
-  } from "@/features/roster/composables/useTraitTooltip.js";
+  } from "@/features/roster";
 
   const props = defineProps({
     team: Array,

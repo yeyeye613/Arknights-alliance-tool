@@ -10,7 +10,7 @@ import {
   computeCovenantStats,
   listCoreCovenants,
 } from "@/features/covenants/domain/covenantStats";
-import { useGameVersion } from "@/features/game-version/composables/useGameVersion.js";
+import { useGameVersion } from "@/features/game-version";
 
 /**
  * @param {import("vue").Ref<Array>} teamRef - 编队的响应式引用

@@ -90,7 +90,7 @@
       </div>
     </main>
 
-    <SaveTeamModal
+    <SaveTeamDialog
       :show="showTeamModal"
       :currentTeam="team"
       :team-collections="teamCollections"
@@ -109,7 +109,7 @@
       @update="updateTeamWrapper"
     />
 
-    <ShareModal
+    <ShareDialog
       :show="showShareModal"
       :title="shareType === 'team' ? '分享编队' : '分享合集'"
       :share-code="shareCode"
@@ -120,7 +120,7 @@
       @close="closeShareModal"
     />
 
-    <ImportModal
+    <ImportDialog
       :show="showImportModal"
       @close="closeImportModal"
       @import="importFromCodeWrapper"
@@ -147,28 +147,29 @@
 <script setup>
   import { computed, ref, onMounted, watch } from "vue";
 
-  import PoolPanel from "@/features/roster/components/PoolPanel.vue";
-  import EquipmentPool from "@/features/equipment/components/EquipmentPool.vue";
-  import EquipmentStaging from "@/features/equipment/components/EquipmentStaging.vue";
-  import TeamPanel from "@/features/formation/components/TeamPanel.vue";
-  import SavedTeamsPanel from "@/features/library/components/SavedTeamsPanel.vue";
-  import SaveTeamModal from "@/features/library/components/SaveTeamDialog.vue";
-  import ShareModal from "@/features/sharing/components/ShareDialog.vue";
-  import ImportModal from "@/features/sharing/components/ImportDialog.vue";
-  import VersionSwitch from "@/features/game-version/components/VersionSwitch.vue";
-  import TraitTooltip from "@/features/roster/components/TraitTooltip.vue";
-  import CovenantTooltip from "@/features/covenants/components/CovenantTooltip.vue";
-  import PwaUpdatePrompt from "@/shared/components/PwaUpdatePrompt.vue";
-
-  import { useTeamStorage } from "@/features/library/composables/useSavedTeams.js";
-  import { useShareCode } from "@/features/sharing/composables/useShareCode.js";
-  import { useTeamManagement } from "@/features/formation/composables/useTeamManagement.js";
+  import { CovenantTooltip } from "@/features/covenants";
+  import {
+    EquipmentPool,
+    EquipmentStaging,
+    hasEquipmentPool as versionHasEquipmentPool,
+    shouldConsumeFromStaging,
+  } from "@/features/equipment";
+  import {
+    TeamPanel,
+    resolveTeamVersionId,
+    useTeamManagement,
+  } from "@/features/formation";
+  import { VersionSwitch, useGameVersion } from "@/features/game-version";
+  import {
+    SaveTeamDialog,
+    SavedTeamsPanel,
+    useTeamStorage,
+  } from "@/features/library";
+  import { PoolPanel, TraitTooltip } from "@/features/roster";
+  import { ImportDialog, ShareDialog, useShareCode } from "@/features/sharing";
   import { useModalState } from "@/app/useModalState.js";
-  import { useGameVersion } from "@/features/game-version/composables/useGameVersion.js";
   import { getGameVersion } from "@/data/versions.js";
-  import { hasEquipmentPool as versionHasEquipmentPool } from "@/features/equipment/domain/equipRules";
-  import { resolveTeamVersionId } from "@/features/formation/domain/teamRules";
-  import { shouldConsumeFromStaging } from "@/features/equipment/domain/equipRules";
+  import PwaUpdatePrompt from "@/shared/components/PwaUpdatePrompt.vue";
 
   // 游戏版本
   const { currentVersion, currentVersionId, setVersion } = useGameVersion();

@@ -168,7 +168,7 @@
   import {
     hideCovenantTooltip,
     isCoarsePointer,
-  } from "@/features/covenants/composables/useCovenantTooltip.js";
+  } from "@/features/covenants";
 
   /**
    * 干员池筛选面板：搜索、视图切换、阶数、阵营、盟约、特质与已选摘要。

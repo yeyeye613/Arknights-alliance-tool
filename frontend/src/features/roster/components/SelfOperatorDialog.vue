@@ -96,7 +96,7 @@
 
   import BaseModal from "@/shared/components/BaseModal.vue";
   import selfOpConfig from "@/data/selfOperators.json";
-  import { useGameVersion } from "@/features/game-version/composables/useGameVersion.js";
+  import { useGameVersion } from "@/features/game-version";
   import { getAvatarUrl } from "@/shared/lib/assets.js";
 
   const { currentVersion } = useGameVersion();

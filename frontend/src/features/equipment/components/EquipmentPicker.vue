@@ -125,7 +125,7 @@
 <script setup>
   import { computed, ref, watch } from "vue";
   import BaseModal from "@/shared/components/BaseModal.vue";
-  import { useGameVersion } from "@/features/game-version/composables/useGameVersion.js";
+  import { useGameVersion } from "@/features/game-version";
   import { getOperatorCovenants } from "@/data/versions.js";
   import { TIER_LABELS, getEquipmentList } from "@/data/equipment.js";
   import {

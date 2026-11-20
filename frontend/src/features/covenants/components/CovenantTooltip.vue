@@ -79,7 +79,7 @@
 <script setup>
   import { computed, nextTick, ref, watch } from "vue";
   import { useCovenantTooltipState } from "@/features/covenants/composables/useCovenantTooltip.js";
-  import { useGameVersion } from "@/features/game-version/composables/useGameVersion.js";
+  import { useGameVersion } from "@/features/game-version";
 
   const state = useCovenantTooltipState();
   const { covenants } = useGameVersion();
