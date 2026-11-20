@@ -21,11 +21,6 @@ export interface Covenant {
   /** 激活所需人数 */
   activateCount: number;
   effects: CovenantEffect[];
-  /**
-   * PRTS 页面上列出的成员，仅作参考——运行时判定一律以 operator.covenants 为准。
-   * 该字段存在漂移（见审计 D2），保留只为对照原始数据。
-   */
-  operators?: string[];
 }
 
 /** 取某版本指定分组（core / additional）的盟约名称 */
