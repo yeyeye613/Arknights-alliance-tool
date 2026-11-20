@@ -1,11 +1,11 @@
 import { onMounted, ref, watch } from "vue";
 
 import selfOpConfig from "@/data/selfOperators.json";
+import { createOperatorInstance } from "@/entities/operator";
 import {
   getSelfOperators,
   setSelfOperators,
 } from "@/infrastructure/storage/preferencesRepository";
-import { getAvatarUrl } from "@/shared/lib/assets.js";
 
 /**
  * 自选（甄选）干员
@@ -31,12 +31,13 @@ function normalizeSelfOperators(operators) {
 
   return operators
     .filter((op) => selfOpConfig[op?.name] && ALLOWED_TIERS.includes(op?.tier))
-    .map((op) => ({
-      name: op.name,
-      tier: op.tier,
-      avatar: getAvatarUrl(op.name),
-      isSelfOperator: true,
-    }));
+    .map((op) =>
+      createOperatorInstance({
+        name: op.name,
+        tier: op.tier,
+        isSelfOperator: true,
+      }),
+    );
 }
 
 /** 自选干员列表：读取缓存 + 变更落盘 */

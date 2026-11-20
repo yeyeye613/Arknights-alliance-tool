@@ -13,10 +13,10 @@ import pako from "pako";
 
 import { decodeCompact, isCompactCode } from "@/features/sharing/domain/shareCodec";
 import { ShareError } from "@/features/sharing/domain/shareErrors";
-import { getAvatarUrl } from "@/shared/lib/assets.js";
 import { DEFAULT_VERSION_ID } from "@/data/versions.js";
 import type { OperatorInstance } from "@/entities/operator";
 import {
+  createOperatorInstance,
   findOperatorEverywhere,
   isSelfOperatorRegistered,
 } from "@/entities/operator";
@@ -129,7 +129,7 @@ export function restoreOperators(
   const version = getGameVersion(versionId);
 
   return (ops ?? [])
-    .map((entry, index): OperatorInstance | null => {
+    .map((entry): OperatorInstance | null => {
       const name = typeof entry === "string" ? entry : entry?.n;
       if (!name) {
         return null;
@@ -150,14 +150,12 @@ export function restoreOperators(
           ? Boolean(entry?.s)
           : !version.operators?.[name] && isSelfOperatorRegistered(name);
 
-      return {
-        id: index,
+      return createOperatorInstance({
         name,
-        avatar: getAvatarUrl(name),
-        tier: tier || undefined,
+        tier,
         isSelfOperator,
-        ...(equipments.length ? { equipments } : {}),
-      };
+        equipments,
+      });
     })
     .filter((op): op is OperatorInstance => op !== null);
 }

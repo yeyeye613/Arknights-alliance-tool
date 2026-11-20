@@ -5,8 +5,8 @@
       <div class="team-avatars">
         <img
           v-for="op in previewOperators"
-          :key="op.id"
-          :src="op.avatar"
+          :key="operatorKey(op)"
+          :src="getAvatarUrl(op.name)"
           class="preview-avatar"
         />
       </div>
@@ -63,6 +63,9 @@
 
 <script setup>
   import { computed } from "vue";
+
+  import { operatorKey } from "@/entities/operator";
+  import { getAvatarUrl } from "@/shared/lib/assets.js";
 
   /**
    * 已保存编队的一条记录：名字 + 前 9 个头像 + 操作按钮。

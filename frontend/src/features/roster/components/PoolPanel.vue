@@ -49,7 +49,7 @@
       >
         <OperatorCard
           v-for="op in filteredPool"
-          :key="op.id"
+          :key="operatorKey(op)"
           :op="op"
           :tier="getTier(op)"
           pick-on="root"
@@ -101,7 +101,7 @@
     moveCovenantTooltip,
     showCovenantTooltip,
   } from "@/features/covenants";
-  import { getAvatarUrl } from "@/shared/lib/assets.js";
+  import { createOperatorInstance, operatorKey } from "@/entities/operator";
 
   const {
     currentVersion,
@@ -160,21 +160,18 @@
   const emit = defineEmits(["addToTeam", "notify"]);
 
   // 干员池处理
+  /** 版本池里的干员：等阶按版本数据回退，`getTier` 负责 */
   const baseOperators = computed(() =>
-    Object.keys(currentVersion.value.operators).map((name, index) => ({
-      id: index,
-      name,
-      avatar: getAvatarUrl(name),
-    })),
+    Object.keys(currentVersion.value.operators).map((name) =>
+      createOperatorInstance({ name }),
+    ),
   );
 
-  const operatorPool = computed(() => {
-    const selfOps = selfOperators.value.map((op, index) => ({
-      id: `self-${op.tier}-${op.name}-${index}`,
-      ...op,
-    }));
-    return [...baseOperators.value, ...selfOps];
-  });
+  /** 自选干员自带等阶与来源标记，直接拼在后面——同名可共存（D3 决策） */
+  const operatorPool = computed(() => [
+    ...baseOperators.value,
+    ...selfOperators.value,
+  ]);
 
   /** 显示等阶：自选干员自带 tier，其余按版本数据回退 */
   const getTier = (op) => resolveTier(op, currentVersion.value);

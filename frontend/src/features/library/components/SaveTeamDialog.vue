@@ -52,8 +52,8 @@
       <div class="team-avatars">
         <img
           v-for="op in currentTeam"
-          :key="op.id"
-          :src="op.avatar"
+          :key="operatorKey(op)"
+          :src="getAvatarUrl(op.name)"
           class="preview-avatar"
         />
       </div>
@@ -83,6 +83,8 @@
 <script setup>
   import { ref, nextTick, watch } from "vue";
   import BaseModal from "@/shared/components/BaseModal.vue";
+  import { operatorKey } from "@/entities/operator";
+  import { getAvatarUrl } from "@/shared/lib/assets.js";
 
   const props = defineProps({
     show: Boolean,

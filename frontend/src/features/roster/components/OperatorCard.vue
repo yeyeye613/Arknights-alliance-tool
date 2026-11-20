@@ -13,7 +13,7 @@
       @click="handleImageClick"
     >
       <img
-        :src="op.avatar"
+        :src="avatar"
         @error="handleImgError"
       />
       <span
@@ -37,7 +37,9 @@
 </template>
 
 <script setup>
-  import { handleImgError } from "@/shared/lib/assets.js";
+  import { computed } from "vue";
+
+  import { getAvatarUrl, handleImgError } from "@/shared/lib/assets.js";
 
   /**
    * 干员卡片：干员池与编队共用的唯一定义。
@@ -46,7 +48,7 @@
    * 这些由父级通过原生事件透传（`<OperatorCard @mouseenter=...>`）挂到根元素上。
    */
   const props = defineProps({
-    /** 干员实例：{ name, avatar, isSelfOperator? } */
+    /** 干员实例：{ name, tier?, isSelfOperator?, equipments } */
     op: { type: Object, required: true },
     /** 阶数角标；编队不传，干员池传 */
     tier: { type: String, default: "" },
@@ -70,6 +72,9 @@
   });
 
   const emit = defineEmits(["pick"]);
+
+  /** 头像路径只由名字决定，不存进实例——资源目录换了也不用洗存档 */
+  const avatar = computed(() => getAvatarUrl(props.op.name));
 
   const handleRootClick = () => {
     if (props.pickOn === "root") {

@@ -117,8 +117,9 @@ describe("v3 分享码快照", () => {
     const { importTeam: importer } = useShareCode();
     const imported = importer(parsed);
     expect(imported.team[0].equipments).toEqual(["变形同构体", "坚守盾牌"]);
-    // 没装备的干员不应写出空数组，否则码会变长
-    expect(imported.team[1].equipments).toBeUndefined();
+    // 实例形状恒为数组（D3）；「码不会变长」由上面的快照串锁住——
+    // 编码侧按有没有装备决定是否写这一段，空数组不进线格式
+    expect(imported.team[1].equipments).toEqual([]);
   });
 
   it("合集快照串可解码", () => {

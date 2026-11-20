@@ -32,16 +32,48 @@ export interface OperatorBase {
 /**
  * 编队中的干员实例
  *
- * 注意：这不是静态数据，而是界面拼装出来的运行时对象。
- * 几处拼装的字段并不完全一致（见审计 D3）。
+ * 只保留语义字段：`avatar` 由名字现算（`getAvatarUrl`），`id` 由
+ * `operatorKey` 派生——两者都不是数据，固化进实例只会让存档跟着
+ * 资源路径与渲染规则一起漂移。
+ *
+ * `equipments` 恒为数组，不再区分 undefined 与空数组：五个构造点
+ * 统一走 `createOperatorInstance`，调用方不必再写 `op.equipments ?? []`。
  */
 export interface OperatorInstance {
-  id?: number | string;
   name: string;
-  avatar?: string;
   tier?: string;
   isSelfOperator?: boolean;
-  equipments?: string[];
+  equipments: string[];
+}
+
+/**
+ * 构造干员实例的唯一入口
+ *
+ * 池子、自选配置、分享码导入都走这里，避免各处只填自己关心的字段。
+ * 不依赖 `getAvatarUrl`：那是带 `import.meta.env.BASE_URL` 的视图侧函数，
+ * 放在这里会让实体层耦合打包环境。
+ */
+export function createOperatorInstance(
+  input: { name: string } & Partial<Omit<OperatorInstance, "name">>,
+): OperatorInstance {
+  return {
+    name: input.name,
+    tier: input.tier || undefined,
+    isSelfOperator: input.isSelfOperator ? true : undefined,
+    equipments: Array.isArray(input.equipments)
+      ? input.equipments.filter(Boolean)
+      : [],
+  };
+}
+
+/**
+ * 干员实例在列表里的身份
+ *
+ * 干员池里同名干员可以共存（版本池与自选池各一份，共 12 个名字重叠），
+ * 所以只用名字做 `v-for` 的 key 会撞。来源不同即视为不同条目。
+ */
+export function operatorKey(op: Pick<OperatorInstance, "name" | "isSelfOperator">): string {
+  return `${op.isSelfOperator ? "self:" : ""}${op.name}`;
 }
 
 /** 编队元素：允许直接给干员名（历史数据结构里 team 可能存字符串） */

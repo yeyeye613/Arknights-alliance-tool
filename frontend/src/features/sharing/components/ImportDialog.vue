@@ -29,8 +29,8 @@
             <div class="preview-team-avatars">
               <img
                 v-for="op in previewData.team"
-                :key="op.id"
-                :src="op.avatar"
+                :key="operatorKey(op)"
+                :src="getAvatarUrl(op.name)"
                 class="preview-avatar"
               />
             </div>
@@ -51,8 +51,8 @@
                 <div class="team-avatars">
                   <img
                     v-for="op in (team.team || []).slice(0, 5)"
-                    :key="op.id"
-                    :src="op.avatar"
+                    :key="operatorKey(op)"
+                    :src="getAvatarUrl(op.name)"
                     class="preview-avatar small"
                   />
                 </div>
@@ -94,6 +94,8 @@
 <script setup>
   import { ref, watch, nextTick, computed } from "vue";
   import BaseModal from "@/shared/components/BaseModal.vue";
+  import { operatorKey } from "@/entities/operator";
+  import { getAvatarUrl } from "@/shared/lib/assets.js";
   import { useShareCode } from "@/features/sharing/composables/useShareCode.js";
   import { shareMessageOf } from "@/features/sharing/messages";
 

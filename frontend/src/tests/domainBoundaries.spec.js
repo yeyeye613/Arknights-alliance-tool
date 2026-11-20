@@ -101,6 +101,10 @@ describe("domain 层约束", () => {
       expect(code, `${file} 不应 import .vue`).not.toMatch(
         /from\s+["'][^"']*\.vue["']/,
       );
+      // 资源路径工具依赖 import.meta.env.BASE_URL，属打包环境（D3）
+      expect(code, `${file} 不应 import 资源路径工具`).not.toMatch(
+        /from\s+["'][^"']*\/shared\/lib\/assets/,
+      );
     }
   });
 

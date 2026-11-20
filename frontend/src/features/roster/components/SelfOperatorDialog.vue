@@ -97,6 +97,7 @@
 
   import BaseModal from "@/shared/components/BaseModal.vue";
   import selfOpConfig from "@/data/selfOperators.json";
+  import { createOperatorInstance } from "@/entities/operator";
   import { useGameVersion } from "@/features/game-version";
   import { getAvatarUrl } from "@/shared/lib/assets.js";
 
@@ -185,19 +186,12 @@
   };
 
   const confirmSelection = () => {
+    const toInstance = (tier) => (name) =>
+      createOperatorInstance({ name, tier, isSelfOperator: true });
+
     const selectedOperators = [
-      ...selectedTierFive.value.map((name) => ({
-        name,
-        tier: "Ⅴ",
-        avatar: getAvatarUrl(name),
-        isSelfOperator: true,
-      })),
-      ...selectedTierSix.value.map((name) => ({
-        name,
-        tier: "Ⅵ",
-        avatar: getAvatarUrl(name),
-        isSelfOperator: true,
-      })),
+      ...selectedTierFive.value.map(toInstance("Ⅴ")),
+      ...selectedTierSix.value.map(toInstance("Ⅵ")),
     ];
 
     emit("confirm", selectedOperators);

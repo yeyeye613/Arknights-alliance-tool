@@ -19,6 +19,15 @@ export const MORPH_EQUIPMENT = "变形同构体";
 type EquipmentPool = Record<string, Equipment>;
 
 /**
+ * 「只关心装备槽」的宽松输入
+ *
+ * `OperatorInstance.equipments` 现在必填，但这里的调用方包括历史存档与
+ * 分享码中间结构——字段可能整个缺失。用宽松形状收口，比让每个调用方
+ * 自己补 `equipments: []` 更贴近事实。
+ */
+type EquipmentCarrier = { equipments?: string[] } | null | undefined;
+
+/**
  * 取版本的装备池
  * @param version 版本数据
  */
@@ -31,9 +40,7 @@ const poolOf = (version?: Partial<GameVersion> | null): EquipmentPool =>
  * 存档里可能出现 `["", "坚守盾牌"]` 这类空串占位，这里统一收口。
  * @param op 编队干员
  */
-export function getOperatorEquipmentNames(
-  op?: Pick<OperatorInstance, "equipments"> | null,
-): string[] {
+export function getOperatorEquipmentNames(op?: EquipmentCarrier): string[] {
   if (!op?.equipments) return [];
   return op.equipments.filter(Boolean).slice(0, EQUIPMENT_SLOT_COUNT);
 }
@@ -108,7 +115,7 @@ export type EquipResult =
  * @param name 装备名
  */
 export function equipToOperator(
-  op: Pick<OperatorInstance, "equipments"> | null | undefined,
+  op: EquipmentCarrier,
   name: string,
 ): EquipResult {
   if (!name) return { ok: false, reason: "empty" };

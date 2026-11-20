@@ -121,7 +121,8 @@ describe("分享码携带装备", () => {
     const imported = importTeam(parsed);
 
     expect(imported.team[0].equipments).toEqual([MORPH_EQUIPMENT, "坚守盾牌"]);
-    expect(imported.team[1].equipments).toBeUndefined();
+    // 实例形状恒为数组（D3）；空数组不进分享码，线格式不变
+    expect(imported.team[1].equipments).toEqual([]);
     expect(imported.team[0].name).toBe("卡达");
   });
 
