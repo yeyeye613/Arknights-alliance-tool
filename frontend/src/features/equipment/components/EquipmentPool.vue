@@ -85,7 +85,8 @@
   import { getEquipmentIconUrl, handleImgError } from "@/shared/lib/assets.js";
   import { EQUIPMENT_DRAG_TYPE } from "@/features/equipment/composables/useEquipmentDrag.js";
 
-  const props = defineProps({
+  // 模板直接引用 staged，脚本里用不到 props 对象
+  defineProps({
     /** 已在临时装备池里的装备名，用于角标提示 */
     staged: { type: Array, default: () => [] },
   });

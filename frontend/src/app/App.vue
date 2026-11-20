@@ -256,7 +256,6 @@
     addToTeam,
     removeFromTeam,
     handleLimitChange,
-    clearTeam,
     loadTeam: loadTeamFromManagement,
   } = useTeamManagement(teamLimit);
 
@@ -267,10 +266,6 @@
     initSavedTeams,
     saveCollections,
     saveAllData,
-    addOrUpdateTeam,
-    deleteTeam: deleteStoredTeam,
-    moveToCollection: moveStoredTeam,
-    // 新增操作方法
     saveTeam,
     updateTeam,
     deleteTeamOp,
@@ -286,17 +281,12 @@
   // 模态框状态
   const {
     showTeamModal,
-    teamName,
     editingTeam,
     editingLocation,
-    selectedCollection,
-    showNewCollectionInput,
-    newCollectionName,
     showShareModal,
     showImportModal,
     shareType,
     shareCode,
-    importCode,
     currentShareTeam,
     currentShareCollection,
     tempMessage,
@@ -305,7 +295,6 @@
     closeShareModal,
     closeImportModal,
     showTempMessage,
-    // 新增操作方法
     editTeam,
   } = useModalState();
 

@@ -18,11 +18,10 @@ describe("useModalState", () => {
   });
 
   it("非空编队打开保存弹窗，返回 true", () => {
-    const { showTeamModal, teamName, openSaveTeamModal } = useModalState();
+    const { showTeamModal, openSaveTeamModal } = useModalState();
 
     expect(openSaveTeamModal([{ name: "能天使" }])).toBe(true);
     expect(showTeamModal.value).toBe(true);
-    expect(teamName.value).toBe("");
   });
 
   it("重新打开时清掉上一次的编辑态", () => {

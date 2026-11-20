@@ -2,18 +2,13 @@ import { ref } from "vue";
 
 export function useModalState() {
   const showTeamModal = ref(false);
-  const teamName = ref("");
   const editingTeam = ref(null);
   const editingLocation = ref(null);
-  const selectedCollection = ref("");
-  const showNewCollectionInput = ref(false);
-  const newCollectionName = ref("");
 
   const showShareModal = ref(false);
   const showImportModal = ref(false);
   const shareType = ref("");
   const shareCode = ref("");
-  const importCode = ref("");
   const currentShareTeam = ref(null);
   const currentShareCollection = ref(null);
 
@@ -27,22 +22,17 @@ export function useModalState() {
     if (!team.length) {
       return false;
     }
-    teamName.value = "";
+    // 队名与合集选择由 SaveTeamDialog 自己持有，这里只负责开窗与编辑态
     editingTeam.value = null;
     editingLocation.value = null;
-    selectedCollection.value = "";
     showTeamModal.value = true;
     return true;
   };
 
   const closeTeamModal = () => {
     showTeamModal.value = false;
-    teamName.value = "";
     editingTeam.value = null;
     editingLocation.value = null;
-    selectedCollection.value = "";
-    showNewCollectionInput.value = false;
-    newCollectionName.value = "";
   };
 
   const closeShareModal = () => {
@@ -54,7 +44,6 @@ export function useModalState() {
 
   const closeImportModal = () => {
     showImportModal.value = false;
-    importCode.value = "";
   };
 
   const showTempMessage = (msg) => {
@@ -72,17 +61,12 @@ export function useModalState() {
 
   return {
     showTeamModal,
-    teamName,
     editingTeam,
     editingLocation,
-    selectedCollection,
-    showNewCollectionInput,
-    newCollectionName,
     showShareModal,
     showImportModal,
     shareType,
     shareCode,
-    importCode,
     currentShareTeam,
     currentShareCollection,
     tempMessage,

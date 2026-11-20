@@ -159,7 +159,7 @@
       setTimeout(() => {
         copied.value = false;
       }, 2000);
-    } catch (err) {
+    } catch {
       // Fallback for older browsers
       codeInput.value?.select();
       document.execCommand("copy");
