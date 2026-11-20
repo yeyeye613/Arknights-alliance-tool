@@ -10,11 +10,9 @@
  * 注：「拉特兰桥夹」→拉特兰 的对应关系来自 PRTS 变形同构体页面，
  * 但该装备不在规程装备池中（属盟约版），因此未收录进数据文件。
  *
- * 分层说明（P1）：
- * - 纯规则（槽位、morph、组合装、装配校验）已下沉到 `src/domain/equipRules.ts`，
- *   这里保留 re-export 以免一次改动牵动十几个调用点；
- * - 本文件只负责「怎么读版本里的装备数据」。
- * - P4 目录迁移时删除 re-export，调用方直接指向 features/equipment/domain。
+ * 分层说明：
+ * - 纯规则（槽位、morph、组合装、装配校验）在 `features/equipment/domain/equipRules.ts`；
+ * - 本文件只负责「怎么读版本里的装备数据」，不再 re-export 规则。
  */
 
 /** 等阶罗马数字 */
@@ -26,17 +24,6 @@ export const TIER_LABELS = {
   5: "Ⅴ",
   6: "Ⅵ",
 };
-
-export {
-  EQUIPMENT_SLOT_COUNT,
-  MORPH_EQUIPMENT,
-  equipToOperator,
-  getCombinedEquipments,
-  getMorphCovenant,
-  getOperatorEquipmentNames,
-  hasEquipmentPool,
-  removeOperatorEquipment,
-} from "@/domain/equipRules";
 
 /**
  * 取某个版本的装备池

@@ -45,9 +45,9 @@ async function appendCodebook(rel, incomingNames, label) {
 }
 
 const [mengyue, guicheng, selfOp, equipments] = await Promise.all([
-  readJson("src/data/operators.json", {}),
+  readJson("src/data/operators.mengyue.json", {}),
   readJson("src/data/operators.guicheng.json", {}),
-  readJson("src/data/selfOp.json", {}),
+  readJson("src/data/selfOperators.json", {}),
   readJson("src/data/equipment.guicheng.json", {}),
 ]);
 

@@ -12,7 +12,7 @@ export default defineConfig({
     vue(),
     createHtmlPlugin({}),
     VitePWA({
-      // 由 src/composables/usePwaUpdate.js 手动注册，便于提示“新版本可用”
+      // 由 src/infrastructure/pwa/usePwaUpdate.ts 手动注册，便于提示「新版本可用」
       injectRegister: false,
       registerType: "prompt",
       includeAssets: ["favicon.svg", "icons.svg"],
@@ -72,7 +72,7 @@ export default defineConfig({
       reporter: ["text-summary", "text", "html"],
       // 只统计源码：数据 JSON 与测试自身不计入
       include: ["src/**/*.{js,ts,vue}"],
-      exclude: ["src/tests/**", "src/**/*.d.ts"],
+      exclude: ["src/**/tests/**", "src/tests/**", "src/**/*.d.ts"],
       // 初始只出报告不设卡：存量覆盖率先测量，阈值在 P2 拆分后再定
       reportOnFailure: true,
     },

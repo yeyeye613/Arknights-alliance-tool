@@ -7,8 +7,8 @@
  * 合法性判断不在这里：版本 id 是否注册、自选干员名字与阶数是否有效，
  * 都是业务规则，留在对应 composable 里。
  */
-import { STORAGE_KEYS } from "./keys";
-import { readJSON, readText, writeJSON, writeText } from "./localStore";
+import { STORAGE_KEYS } from "@/infrastructure/storage/keys";
+import { readJSON, readText, writeJSON, writeText } from "@/infrastructure/storage/localStore";
 
 /** 筛选区展示形态：图标 / 文字 */
 export type FilterView = "icon" | "text";

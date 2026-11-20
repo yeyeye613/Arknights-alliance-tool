@@ -9,16 +9,16 @@
  * - 卫戍协议：盟约  https://prts.wiki/w/卫戍协议：盟约
  * - 卫戍协议·规程  https://prts.wiki/w/卫戍协议·规程/PRTS盟约记录
  */
-import covenantsMengyue from "./covenants.json";
-import operatorsMengyue from "./operators.json";
-import covenantsGuicheng from "./covenants.guicheng.json";
-import operatorsGuicheng from "./operators.guicheng.json";
-import equipmentsGuicheng from "./equipment.guicheng.json";
-import selfOpConfig from "./selfOp.json";
+import covenantsMengyue from "@/data/covenants.mengyue.json";
+import operatorsMengyue from "@/data/operators.mengyue.json";
+import covenantsGuicheng from "@/data/covenants.guicheng.json";
+import operatorsGuicheng from "@/data/operators.guicheng.json";
+import equipmentsGuicheng from "@/data/equipment.guicheng.json";
+import selfOpConfig from "@/data/selfOperators.json";
 import {
   getMorphCovenant,
   getOperatorEquipmentNames,
-} from "./equipment.js";
+} from "@/features/equipment/domain/equipRules";
 
 /** 默认版本：保持与历史存档兼容 */
 export const DEFAULT_VERSION_ID = "mengyue";

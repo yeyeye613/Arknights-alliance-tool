@@ -14,7 +14,7 @@ import {
   saveCollections,
   saveTeams,
   toPersistedCollection,
-} from "../infrastructure/storage/teamsRepository";
+} from "@/infrastructure/storage/teamsRepository";
 
 /** 早期版本写下的存档：编队没有 version 字段，合集带 expanded */
 const LEGACY_TEAMS = [

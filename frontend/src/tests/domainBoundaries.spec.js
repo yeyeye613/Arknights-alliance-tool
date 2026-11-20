@@ -1,23 +1,44 @@
 /**
- * 分层护栏：domain/ 必须保持「纯」
+ * 分层护栏：领域层必须保持「纯」
  *
  * 这条测试不验证业务行为，而是防止后续改动把 Vue 响应式、
  * 浏览器副作用、界面依赖偷偷塞回领域层（审计建议的可检查约束 1/4/5/6）。
  * 它读的是源码文本，因此不需要额外依赖。
+ *
+ * P4 目录迁移后领域层分散在 `src/domain`（跨 feature 的类型与数据适配）与
+ * `src/features/<feature>/domain`，因此按目录名递归收集，而不是写死一个路径。
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const DOMAIN_DIR = join(dirname(fileURLToPath(import.meta.url)), "../domain");
+const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-const domainFiles = readdirSync(DOMAIN_DIR).filter((name) =>
-  name.endsWith(".ts"),
-);
+/** 所有名为 domain 的目录下的 .ts 文件（相对 src 的路径） */
+function collectDomainFiles(dir = SRC_DIR) {
+  const found = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const full = join(dir, entry.name);
+    if (entry.name === "node_modules" || entry.name === "tests") continue;
+    if (entry.name === "domain") {
+      for (const file of readdirSync(full)) {
+        if (file.endsWith(".ts")) {
+          found.push(relative(SRC_DIR, join(full, file)).split(sep).join("/"));
+        }
+      }
+      continue;
+    }
+    found.push(...collectDomainFiles(full));
+  }
+  return found;
+}
 
-/** 读取某个领域文件的源码 */
-const sourceOf = (name) => readFileSync(join(DOMAIN_DIR, name), "utf8");
+const domainFiles = collectDomainFiles();
+
+/** 读取某个领域文件的源码（参数是相对 src 的路径） */
+const sourceOf = (name) => readFileSync(join(SRC_DIR, name), "utf8");
 
 /**
  * 去掉注释后再检查
@@ -32,7 +53,8 @@ const codeOf = (name) =>
 
 describe("domain 层约束", () => {
   it("至少包含预期的领域文件", () => {
-    expect(domainFiles).toEqual(
+    const names = domainFiles.map((file) => file.split("/").pop());
+    expect(names).toEqual(
       expect.arrayContaining([
         "covenantStats.ts",
         "equipRules.ts",

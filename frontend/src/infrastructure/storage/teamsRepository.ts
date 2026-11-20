@@ -8,8 +8,8 @@
  * 存档结构本身不改：`SavedTeam[]` 与 `PersistedCollection[]` 的字段与旧版一致。
  */
 import type { SavedTeam, TeamCollection } from "@/domain/types";
-import { STORAGE_KEYS } from "./keys";
-import { readJSON, writeJSON } from "./localStore";
+import { STORAGE_KEYS } from "@/infrastructure/storage/keys";
+import { readJSON, writeJSON } from "@/infrastructure/storage/localStore";
 
 /** 落库形态：不含仅用于界面的 expanded */
 export type PersistedCollection = Omit<TeamCollection, "expanded">;

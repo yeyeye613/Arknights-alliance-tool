@@ -14,7 +14,7 @@ import type {
   OperatorBase,
   TeamEntry,
   Trait,
-} from "./types";
+} from "@/domain/types";
 import {
   ADDITIONAL_GROUP,
   CORE_GROUP,

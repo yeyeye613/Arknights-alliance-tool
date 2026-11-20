@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
-import App from "../App.vue";
+import App from "@/app/App.vue";
 
 describe("App 冒烟测试", () => {
   it("渲染标题与版本切换按钮，并能切换版本", async () => {
