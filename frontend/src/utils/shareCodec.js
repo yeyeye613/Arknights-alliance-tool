@@ -18,7 +18,7 @@ import pako from "pako";
 import codebook from "@/data/opCodebook.json";
 import equipCodebook from "@/data/equipCodebook.json";
 
-/** 协议前缀（v3 使用单字符，v1/v2 的 ARKTEAM / ARKCOL / ARKFULL 优先匹配） */
+/** 协议前缀（v3 使用单字符，v1/v2 的 ARKTEAM / ARKCOL 优先匹配） */
 export const CODE_PREFIX = "A";
 
 const MAGIC = 0xc0;
@@ -26,7 +26,8 @@ const MAGIC = 0xc0;
 const MAGIC_EQUIP = 0xd0;
 const TYPE_TEAM = 1;
 const TYPE_COLLECTION = 2;
-const TYPE_FULL = 3;
+// 3 号类型（全量导出）已废弃：从未上线过 UI，也没有任何历史码，
+// 因此不再生成也不再解析（P1 清理，见 docs/architecture/refactoring-plan.md）
 
 const FLAG_COMPRESSED = 1;
 const FLAG_VERSION = 2;
@@ -309,31 +310,6 @@ export function encodeCollection(collection, versionId) {
   return finish(TYPE_COLLECTION, body, versionId, withEquipment);
 }
 
-/**
- * @param {Array} savedTeams
- * @param {Array} collections
- */
-export function encodeFull(savedTeams, collections, versionId) {
-  const body = [];
-  const allTeams = [
-    ...savedTeams,
-    ...collections.flatMap((collection) => collection?.teams || []),
-  ];
-  const withEquipment = hasAnyEquipment(allTeams);
-
-  writeString(body, "");
-  writeVarint(body, savedTeams.length);
-  for (const team of savedTeams) writeTeam(body, team, withEquipment);
-  writeVarint(body, collections.length);
-  for (const collection of collections) {
-    writeString(body, collection?.name || "");
-    const teams = collection?.teams || [];
-    writeVarint(body, teams.length);
-    for (const team of teams) writeTeam(body, team, withEquipment);
-  }
-  return finish(TYPE_FULL, body, versionId, withEquipment);
-}
-
 /* ------------------------------ 对外解码 ------------------------------ */
 
 /**
@@ -387,16 +363,6 @@ export function decodeCompact(code) {
     data.t = "collection";
     data.n = reader.string();
     data.teams = readTeams(reader, withEquipment);
-  } else if (type === TYPE_FULL) {
-    data.t = "full";
-    data.n = reader.string();
-    data.teams = readTeams(reader, withEquipment);
-    const collectionCount = reader.varint();
-    data.collections = [];
-    for (let i = 0; i < collectionCount; i++) {
-      const name = reader.string();
-      data.collections.push({ n: name, teams: readTeams(reader, withEquipment) });
-    }
   } else {
     throw new Error("不支持的分享码类型");
   }

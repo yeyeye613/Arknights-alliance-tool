@@ -20,19 +20,38 @@ import TeamPanel from "../components/TeamPanel.vue";
 const guicheng = getGameVersion("guicheng");
 
 describe("装备池数据", () => {
-  it("should include the whole 规程 equipment pool", () => {
+  it("should cover the whole 规程 equipment pool", () => {
     const list = getEquipmentList(guicheng);
-    expect(list.length).toBe(70);
-    expect(list.filter((item) => item.tier === 6).length).toBe(11);
+    // 列表不丢件：条目数与数据文件一致（不写死 70，赛季更新不必改测试）
+    expect(list.length).toBe(Object.keys(equipmentData).length);
+    expect(list.length).toBeGreaterThan(0);
+
+    // 按等阶升序排列
+    const tiers = list.map((item) => item.tier);
+    expect(tiers).toEqual([...tiers].sort((a, b) => a - b));
+    expect(tiers.every((tier) => tier >= 1 && tier <= 6)).toBe(true);
+    expect(tiers.at(-1)).toBe(6);
+
     expect(guicheng.equipments[MORPH_EQUIPMENT]).toBeTruthy();
     // 盟约版没有装备数据库
     expect(getGameVersion("mengyue").equipments).toEqual({});
   });
 
-  it("should expose 19 equipment that can pair with 变形同构体", () => {
-    const morphItems = Object.values(equipmentData).filter((item) => item.morph);
-    // 12 件单件 + 7 种维式重锤
-    expect(morphItems.length).toBe(19);
+  it("should only morph into covenants of the current version", () => {
+    const morphItems = Object.entries(equipmentData).filter(
+      ([, item]) => item.morph,
+    );
+    expect(morphItems.length).toBeGreaterThan(0);
+    // 变形同构体本身不带 morph，只作为触发件
+    expect(equipmentData[MORPH_EQUIPMENT].morph).toBeUndefined();
+    // morph 指向的盟约必须存在于当前版本，否则装备上去不生效
+    expect(
+      morphItems.filter(([, item]) => !guicheng.covenants[item.morph]),
+    ).toEqual([]);
+    // 维式重锤整个系列都指向维多利亚
+    const hammer = morphItems.filter(([name]) => name.includes("维式重锤"));
+    expect(hammer.length).toBeGreaterThan(1);
+    expect(hammer.every(([, item]) => item.morph === "维多利亚")).toBe(true);
   });
 
   it("should describe combined equipment", () => {

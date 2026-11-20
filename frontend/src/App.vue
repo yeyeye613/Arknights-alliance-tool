@@ -164,8 +164,10 @@
   import { useTeamManagement } from "@/composables/useTeamManagement.js";
   import { useModalState } from "@/composables/useModalState.js";
   import { useGameVersion } from "@/composables/useGameVersion.js";
-  import { DEFAULT_VERSION_ID, getGameVersion } from "@/data/versions.js";
+  import { getGameVersion } from "@/data/versions.js";
   import { hasEquipmentPool as versionHasEquipmentPool } from "@/data/equipment.js";
+  import { resolveTeamVersionId } from "@/domain/teamRules";
+  import { shouldConsumeFromStaging } from "@/domain/equipRules";
 
   // 游戏版本
   const { currentVersion, currentVersionId, setVersion } = useGameVersion();
@@ -228,7 +230,7 @@
 
   /** 装备成功后，把临时装备池里的同一件消耗掉 */
   const handleEquipmentEquipped = ({ name, source }) => {
-    if (source === "staging") {
+    if (shouldConsumeFromStaging(source)) {
       unstageEquipment(name);
     }
     if (selectedEquipment.value === name) {
@@ -277,11 +279,6 @@
   const {
     generateTeamCode,
     generateCollectionCode,
-    importTeam: createTeamFromData,
-    importCollection: createCollectionFromData,
-    // 新增操作方法
-    shareTeam,
-    shareCollection,
     importFromCode,
   } = useShareCode();
 
@@ -320,7 +317,7 @@
   // 包装loadTeam以切换标签
   const loadTeam = (savedItem) => {
     // 加载其他版本的编队时自动切换版本，避免盟约统计错乱
-    const teamVersion = savedItem?.version || DEFAULT_VERSION_ID;
+    const teamVersion = resolveTeamVersionId(savedItem);
     if (teamVersion !== currentVersionId.value && setVersion(teamVersion)) {
       showTempMessage(`已切换到「${getGameVersion(teamVersion).label}」`);
     }
@@ -350,12 +347,12 @@
   };
 
   const saveTeamWrapper = (teamData) => {
-    saveTeam(teamData, team.value, showTempMessage, currentVersionId.value);
+    saveTeam(teamData, showTempMessage, currentVersionId.value);
     closeTeamModal();
   };
 
   const updateTeamWrapper = (teamData) => {
-    updateTeam(teamData, team.value, showTempMessage, currentVersionId.value);
+    updateTeam(teamData, showTempMessage, currentVersionId.value);
     closeTeamModal();
   };
 
@@ -368,27 +365,34 @@
     moveToCollectionOp(teamItem, index, showTempMessage);
   };
 
+  /** 打开分享弹窗（生成码失败时给出提示，不弹空窗） */
+  const openShareModal = (code, preview, type) => {
+    if (!code) {
+      showTempMessage("生成分享码失败");
+      return;
+    }
+    shareCode.value = code;
+    currentShareTeam.value = type === "team" ? preview : null;
+    currentShareCollection.value = type === "collection" ? preview : null;
+    shareType.value = type;
+    showShareModal.value = true;
+  };
+
   const shareTeamWrapper = (teamItem) => {
-    shareTeam(
-      teamItem,
-      currentShareTeam,
-      shareType,
-      shareCode,
-      showShareModal,
-      showTempMessage,
-      teamItem?.version || currentVersionId.value,
+    const versionId = resolveTeamVersionId(teamItem, currentVersionId.value);
+    openShareModal(
+      generateTeamCode(teamItem, versionId),
+      { ...teamItem, type: "team" },
+      "team",
     );
   };
 
   const shareCollectionWrapper = (collection) => {
-    shareCollection(
-      collection,
-      currentShareCollection,
-      shareType,
-      shareCode,
-      showShareModal,
-      showTempMessage,
-      collection?.version || currentVersionId.value,
+    const versionId = resolveTeamVersionId(collection, currentVersionId.value);
+    openShareModal(
+      generateCollectionCode(collection, versionId),
+      { ...collection, type: "collection" },
+      "collection",
     );
   };
 
@@ -399,16 +403,21 @@
       setVersion(codeVersion);
       showTempMessage(`已切换到「${getGameVersion(codeVersion).label}」`);
     }
-    importFromCode(
-      data,
-      savedTeams,
-      teamCollections,
-      saveAllData,
-      saveCollections,
-      showTempMessage,
-      closeImportModal,
-      codeVersion || currentVersionId.value,
-    );
+
+    // 落库与持久化留在这里：composable 只负责映射
+    importFromCode(data, {
+      versionId: codeVersion || currentVersionId.value,
+      addTeam: (newTeam) => {
+        savedTeams.value.push(newTeam);
+        saveAllData();
+      },
+      addCollection: (collection) => {
+        teamCollections.value.push(collection);
+        saveCollections();
+      },
+      notify: showTempMessage,
+      close: closeImportModal,
+    });
   };
 </script>
 

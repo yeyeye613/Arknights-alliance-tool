@@ -166,7 +166,13 @@ export function useTeamStorage() {
   };
 
   // 新增：操作方法
-  const saveTeam = (teamData, team, showTempMessage, versionId) => {
+  /**
+   * 保存新编队
+   * @param {Object} teamData - 弹窗提交的数据 { name, team, collectionIndex }
+   * @param {(message: string) => void} showTempMessage - 提示回调
+   * @param {string} [versionId] - 所属游戏版本
+   */
+  const saveTeam = (teamData, showTempMessage, versionId) => {
     const newTeam = {
       name: teamData.name,
       team: [...teamData.team],
@@ -186,10 +192,16 @@ export function useTeamStorage() {
     showTempMessage("编队保存成功");
   };
 
-  const updateTeam = (teamData, team, showTempMessage, versionId) => {
+  /**
+   * 更新已有编队
+   * @param {Object} teamData - 弹窗提交的数据 { name, team, collectionIndex, originalIndex, originalCollectionIndex }
+   * @param {(message: string) => void} showTempMessage - 提示回调
+   * @param {string} [versionId] - 所属游戏版本
+   */
+  const updateTeam = (teamData, showTempMessage, versionId) => {
     const updatedTeam = {
       name: teamData.name,
-      team: [...team],
+      team: [...teamData.team],
       createTime: new Date().toLocaleString(),
       ...(versionId ? { version: versionId } : {}),
     };

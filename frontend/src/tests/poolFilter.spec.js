@@ -3,6 +3,23 @@ import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
 import PoolPanel from "../components/PoolPanel.vue";
 import { useGameVersion } from "@/composables/useGameVersion.js";
+import {
+  CORE_GROUP,
+  ADDITIONAL_GROUP,
+  getCovenantsByGroup,
+  getGameVersion,
+} from "@/data/versions.js";
+
+/** 规程版干员总数：由数据推导，赛季扩池时测试不会假红 */
+const TOTAL = () => Object.keys(getGameVersion("guicheng").operators).length;
+/** 规程版可 Ban 的盟约总数（核心 + 附加） */
+const TOTAL_COVENANTS = () => {
+  const version = getGameVersion("guicheng");
+  return (
+    getCovenantsByGroup(version, CORE_GROUP).length +
+    getCovenantsByGroup(version, ADDITIONAL_GROUP).length
+  );
+};
 
 const visibleNames = (wrapper) =>
   wrapper.findAll(".op-unit .name-label").map((n) => n.text());
@@ -34,7 +51,7 @@ describe("干员池筛选", () => {
   it("按特质类型筛选：特异化只剩对应干员", async () => {
     const wrapper = mount(PoolPanel);
     await nextTick();
-    expect(visibleNames(wrapper).length).toBe(143);
+    expect(visibleNames(wrapper).length).toBe(TOTAL());
 
     await findChip(wrapper, "特异化").trigger("click");
 
@@ -42,7 +59,7 @@ describe("干员池筛选", () => {
     expect(names.length).toBe(2);
     // 再次点击取消筛选
     await findChip(wrapper, "特异化").trigger("click");
-    expect(visibleNames(wrapper).length).toBe(143);
+    expect(visibleNames(wrapper).length).toBe(TOTAL());
     wrapper.unmount();
   });
 
@@ -89,7 +106,7 @@ describe("干员池筛选", () => {
     await findChip(wrapper, "乌萨斯").trigger("click");
     const names = visibleNames(wrapper);
     expect(names.length).toBeGreaterThan(0);
-    expect(names.length).toBeLessThan(143);
+    expect(names.length).toBeLessThan(TOTAL());
     expect(names).toContain("折桠");
     wrapper.unmount();
   });
@@ -126,7 +143,7 @@ describe("干员池筛选", () => {
     let chip = findChip(wrapper, "不屈");
     await chip.trigger("click");
     expect(chip.classes()).toContain("active");
-    expect(visibleNames(wrapper).length).toBeLessThan(143);
+    expect(visibleNames(wrapper).length).toBeLessThan(TOTAL());
     expect(visibleNames(wrapper)).toContain("折桠");
 
     // 再点一下：转为 Ban，筛选状态清除
@@ -145,7 +162,7 @@ describe("干员池筛选", () => {
     await chip.trigger("click");
     chip = findChip(wrapper, "不屈");
     expect(chip.classes()).not.toContain("banned");
-    expect(visibleNames(wrapper).length).toBe(143);
+    expect(visibleNames(wrapper).length).toBe(TOTAL());
     wrapper.unmount();
   });
 
@@ -216,7 +233,7 @@ describe("干员池筛选", () => {
     const names = covRows.flatMap((row) =>
       row.findAll("button.chip").map((chip) => chip.text().trim()),
     );
-    expect(names.length).toBe(26);
+    expect(names.length).toBe(TOTAL_COVENANTS());
     for (const name of names) {
       await banViaChip(wrapper, name);
     }

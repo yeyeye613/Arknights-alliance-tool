@@ -47,8 +47,10 @@ describe("游戏版本数据", () => {
     const mengyue = getGameVersion("mengyue");
     const guicheng = getGameVersion("guicheng");
 
-    expect(Object.keys(mengyue.operators)).toHaveLength(113);
-    expect(Object.keys(guicheng.operators)).toHaveLength(143);
+    // 只断言结构性事实：规程池更大、且拜松只存在于规程（不写死具体人数）
+    expect(Object.keys(guicheng.operators).length).toBeGreaterThan(
+      Object.keys(mengyue.operators).length,
+    );
     expect(guicheng.operators["拜松"]).toBeTruthy();
     expect(mengyue.operators["拜松"]).toBeUndefined();
 

@@ -167,6 +167,18 @@ export function getOperatorTraits(name, version) {
 }
 
 /**
+ * 该名字是否登记在「自选（甄选）干员」配置里
+ *
+ * 注意：登记 ≠ 是自选干员。有的干员同时存在于某个版本的干员池中，
+ * 只有在「当前版本没有它」时才按自选干员处理（见 useShareCode 的还原逻辑）。
+ * @param {string} name - 干员名
+ * @returns {boolean}
+ */
+export function isSelfOperatorRegistered(name) {
+  return Boolean(selfOpConfig[name]);
+}
+
+/**
  * 在所有版本与自选干员中查找干员数据（用于解析分享码等跨版本场景）
  * @param {string} name - 干员名
  * @returns {Object|null} 干员数据
