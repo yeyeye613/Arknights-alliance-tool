@@ -166,8 +166,14 @@
     useTeamStorage,
   } from "@/features/library";
   import { PoolPanel, TraitTooltip } from "@/features/roster";
-  import { ImportDialog, ShareDialog, useShareCode } from "@/features/sharing";
-  import { useModalState } from "@/app/useModalState.js";
+  import {
+    ImportDialog,
+    ShareDialog,
+    useShareCode,
+    useShareDialogs,
+  } from "@/features/sharing";
+  import { useTeamDialog } from "@/app/useTeamDialog.js";
+  import { useToast } from "@/app/useToast.js";
   import { getGameVersion } from "@/data/versions.js";
   import PwaUpdatePrompt from "@/shared/components/PwaUpdatePrompt.vue";
 
@@ -279,25 +285,27 @@
     importFromCode,
   } = useShareCode();
 
-  // 模态框状态
+  // 顶部提示与三个弹窗的状态
+  const { tempMessage, showTempMessage } = useToast();
   const {
     showTeamModal,
     editingTeam,
     editingLocation,
+    openSaveTeamModal,
+    closeTeamModal,
+    editTeam,
+  } = useTeamDialog();
+  const {
     showShareModal,
     showImportModal,
     shareType,
     shareCode,
     currentShareTeam,
     currentShareCollection,
-    tempMessage,
-    openSaveTeamModal,
-    closeTeamModal,
+    openShareModal,
     closeShareModal,
     closeImportModal,
-    showTempMessage,
-    editTeam,
-  } = useModalState();
+  } = useShareDialogs(showTempMessage);
 
   // 初始化
   onMounted(() => {
@@ -371,19 +379,6 @@
       (item) => item.name === collectionName,
     );
     collection.expanded = !collection.expanded;
-  };
-
-  /** 打开分享弹窗（生成码失败时给出提示，不弹空窗） */
-  const openShareModal = (code, preview, type) => {
-    if (!code) {
-      showTempMessage("生成分享码失败");
-      return;
-    }
-    shareCode.value = code;
-    currentShareTeam.value = type === "team" ? preview : null;
-    currentShareCollection.value = type === "collection" ? preview : null;
-    shareType.value = type;
-    showShareModal.value = true;
   };
 
   const shareTeamWrapper = (teamItem) => {

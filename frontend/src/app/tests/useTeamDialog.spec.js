@@ -7,18 +7,18 @@
  */
 import { describe, it, expect } from "vitest";
 
-import { useModalState } from "@/app/useModalState.js";
+import { useTeamDialog } from "@/app/useTeamDialog.js";
 
-describe("useModalState", () => {
+describe("useTeamDialog", () => {
   it("空编队不打开保存弹窗，返回 false", () => {
-    const { showTeamModal, openSaveTeamModal } = useModalState();
+    const { showTeamModal, openSaveTeamModal } = useTeamDialog();
 
     expect(openSaveTeamModal([])).toBe(false);
     expect(showTeamModal.value).toBe(false);
   });
 
   it("非空编队打开保存弹窗，返回 true", () => {
-    const { showTeamModal, openSaveTeamModal } = useModalState();
+    const { showTeamModal, openSaveTeamModal } = useTeamDialog();
 
     expect(openSaveTeamModal([{ name: "能天使" }])).toBe(true);
     expect(showTeamModal.value).toBe(true);
@@ -26,7 +26,7 @@ describe("useModalState", () => {
 
   it("重新打开时清掉上一次的编辑态", () => {
     const { editingTeam, editingLocation, openSaveTeamModal, editTeam } =
-      useModalState();
+      useTeamDialog();
 
     editTeam({ name: "旧编队" }, 0, 1);
     expect(editingTeam.value).toEqual({ name: "旧编队" });
