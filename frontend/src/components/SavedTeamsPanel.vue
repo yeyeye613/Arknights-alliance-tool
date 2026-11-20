@@ -4,6 +4,7 @@
       <h3>已保存编队</h3>
       <div class="header-actions">
         <button
+          type="button"
           @click="editMode = !editMode"
           class="action-btn delete-btn"
           title="编辑模式"
@@ -11,6 +12,7 @@
           {{ editMode ? "完成编辑" : "编辑模式" }}
         </button>
         <button
+          type="button"
           @click.stop="showImportModal"
           class="action-btn share-small-btn"
           title="导入"
@@ -35,8 +37,9 @@
           >
           <div class="collection-actions">
             <button
-              @click.stop="shareCollection(view.collection)"
               v-if="!editMode"
+              type="button"
+              @click.stop="shareCollection(view.collection)"
               class="action-btn share-small-btn"
               title="分享合集"
             >
@@ -54,67 +57,17 @@
           v-show="view.collection.expanded"
           class="collection-teams"
         >
-          <div
+          <TeamCard
             v-for="entry in view.teams"
             :key="entry.teamIndex"
-            class="saved-team-item"
-          >
-            <div class="team-preview">
-              <span class="team-name">{{ entry.team.name }}</span>
-              <div class="team-avatars">
-                <img
-                  v-for="op in entry.team.team.slice(0, 9)"
-                  :key="op.id"
-                  :src="op.avatar"
-                  class="preview-avatar"
-                />
-              </div>
-            </div>
-            <div class="team-actions">
-              <button
-                @click="loadTeam(entry.team)"
-                class="action-btn load-btn"
-                v-if="!editMode"
-                title="加载编队"
-              >
-                加载
-              </button>
-              <button
-                @click="shareTeam(entry.team)"
-                class="action-btn share-small-btn"
-                v-if="!editMode"
-                title="分享编队"
-              >
-                分享
-              </button>
-              <button
-                @click="
-                  editTeam(entry.team, view.collectionIndex, entry.teamIndex)
-                "
-                class="action-btn edit-btn"
-                v-if="editMode"
-                title="编辑"
-              >
-                编辑
-              </button>
-              <button
-                @click="moveToCollection(entry.team, entry.teamIndex)"
-                class="action-btn move-btn"
-                v-if="editMode"
-                title="移动到合集"
-              >
-                移动
-              </button>
-              <button
-                @click="deleteTeam(view.collectionIndex, entry.teamIndex)"
-                class="action-btn delete-btn"
-                v-if="editMode"
-                title="删除"
-              >
-                删除
-              </button>
-            </div>
-          </div>
+            :team="entry.team"
+            :edit-mode="editMode"
+            @load="loadTeam(entry.team)"
+            @share="shareTeam(entry.team)"
+            @edit="editTeam(entry.team, view.collectionIndex, entry.teamIndex)"
+            @move="moveToCollection(entry.team, entry.teamIndex)"
+            @remove="deleteTeam(view.collectionIndex, entry.teamIndex)"
+          />
         </div>
       </div>
 
@@ -141,65 +94,17 @@
           v-show="ungroupedExpanded"
           class="collection-teams"
         >
-          <div
+          <TeamCard
             v-for="entry in savedTeamsView"
             :key="entry.index"
-            class="saved-team-item"
-          >
-            <div class="team-preview">
-              <span class="team-name">{{ entry.team.name }}</span>
-              <div class="team-avatars">
-                <img
-                  v-for="op in entry.team.team.slice(0, 9)"
-                  :key="op.id"
-                  :src="op.avatar"
-                  class="preview-avatar"
-                />
-              </div>
-            </div>
-            <div class="team-actions">
-              <button
-                @click="loadTeam(entry.team)"
-                class="action-btn load-btn"
-                v-if="!editMode"
-                title="加载编队"
-              >
-                加载
-              </button>
-              <button
-                @click="shareTeam(entry.team)"
-                class="action-btn share-small-btn"
-                v-if="!editMode"
-                title="分享编队"
-              >
-                分享
-              </button>
-              <button
-                @click="editTeam(entry.team, null, entry.index)"
-                class="action-btn edit-btn"
-                v-if="editMode"
-                title="编辑"
-              >
-                编辑
-              </button>
-              <button
-                @click="moveToCollection(entry.team, entry.index)"
-                class="action-btn move-btn"
-                v-if="editMode"
-                title="移动到合集"
-              >
-                移动
-              </button>
-              <button
-                @click="deleteTeam(null, entry.index)"
-                class="action-btn delete-btn"
-                v-if="editMode"
-                title="删除"
-              >
-                删除
-              </button>
-            </div>
-          </div>
+            :team="entry.team"
+            :edit-mode="editMode"
+            @load="loadTeam(entry.team)"
+            @share="shareTeam(entry.team)"
+            @edit="editTeam(entry.team, null, entry.index)"
+            @move="moveToCollection(entry.team, entry.index)"
+            @remove="deleteTeam(null, entry.index)"
+          />
         </div>
       </div>
 
@@ -216,6 +121,8 @@
 <script setup>
   import { computed, ref } from "vue";
   import { DEFAULT_VERSION_ID } from "@/data/versions.js";
+  import { resolveTeamVersionId } from "@/domain/teamRules";
+  import TeamCard from "./TeamCard.vue";
 
   const props = defineProps({
     savedTeams: Array,
@@ -240,7 +147,7 @@
   const ungroupedExpanded = ref(true);
 
   /** 编队所属版本（历史存档未标记版本时归入默认版本） */
-  const getTeamVersion = (teamItem) => teamItem?.version || DEFAULT_VERSION_ID;
+  const getTeamVersion = (teamItem) => resolveTeamVersionId(teamItem);
 
   /** 当前版本下的未归类编队（保留原始索引以便增删改） */
   const savedTeamsView = computed(() =>
@@ -293,6 +200,9 @@
   };
 
   const toggleCollection = (index) => {
+    // FIXME(P3)：合集展开态应属于本组件的视图状态，目前直接修改父组件传入的
+    // 对象（P3 收敛持久化时改为 emit + 父级维护）。
+    // eslint-disable-next-line vue/no-mutating-props
     props.teamCollections[index].expanded =
       !props.teamCollections[index].expanded;
   };
@@ -323,6 +233,7 @@
     gap: 8px;
   }
 
+  /* .action-btn 在 TeamCard 里另有一份：scoped 样式无法跨文件复用 */
   .action-btn {
     background: transparent;
     border: none;
@@ -341,6 +252,11 @@
 
   .share-small-btn:hover {
     background: #4caf50;
+    color: white;
+  }
+
+  .delete-btn:hover {
+    background: #f44336;
     color: white;
   }
 
@@ -395,73 +311,6 @@
     padding: 10px;
   }
 
-  .saved-team-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    background: #252525;
-    border-radius: 4px;
-    margin-bottom: 8px;
-    transition: 0.2s;
-  }
-
-  .saved-team-item:hover {
-    background: #2f2f2f;
-  }
-
-  .team-preview {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex: 1;
-  }
-
-  .team-avatars {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    flex-wrap: wrap;
-  }
-
-  .preview-avatar {
-    width: 28px;
-    height: 28px;
-    border-radius: 4px;
-    background: #333;
-    object-fit: cover;
-  }
-
-  .team-name {
-    font-size: 13px;
-    font-weight: 500;
-  }
-
-  .team-actions {
-    display: flex;
-    gap: 6px;
-  }
-
-  .load-btn:hover {
-    background: #4caf50;
-    color: white;
-  }
-
-  .edit-btn:hover {
-    background: #ff9800;
-    color: white;
-  }
-
-  .move-btn:hover {
-    background: #2196f3;
-    color: white;
-  }
-
-  .delete-btn:hover {
-    background: #f44336;
-    color: white;
-  }
-
   .empty-teams {
     text-align: center;
     padding: 40px;
@@ -498,26 +347,6 @@
 
     .collection-teams {
       padding: 8px;
-    }
-
-    .saved-team-item {
-      flex-wrap: wrap;
-      gap: 8px;
-      padding: 8px 10px;
-    }
-
-    .team-preview {
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .preview-avatar {
-      width: 24px;
-      height: 24px;
-    }
-
-    .team-actions {
-      margin-left: auto;
     }
 
     .empty-teams {
