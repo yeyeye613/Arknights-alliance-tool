@@ -95,6 +95,7 @@
   import { ref, watch, nextTick, computed } from "vue";
   import BaseModal from "@/shared/components/BaseModal.vue";
   import { useShareCode } from "@/features/sharing/composables/useShareCode.js";
+  import { shareMessageOf } from "@/features/sharing/messages";
 
   const { parseCode, restoreOperators } = useShareCode();
 
@@ -164,7 +165,7 @@
       errorMessage.value = "";
     } catch (error) {
       parsedData.value = null;
-      errorMessage.value = error.message || "分享码格式错误";
+      errorMessage.value = shareMessageOf(error, "分享码格式错误");
     }
   };
 

@@ -60,6 +60,8 @@ describe("domain 层约束", () => {
         "covenantStats.ts",
         "equipRules.ts",
         "filterOperators.ts",
+        "shareCodec.ts",
+        "shareErrors.ts",
         "shareImport.ts",
         "teamRules.ts",
       ]),
@@ -99,6 +101,26 @@ describe("domain 层约束", () => {
       expect(code, `${file} 不应 import .vue`).not.toMatch(
         /from\s+["'][^"']*\.vue["']/,
       );
+    }
+  });
+
+  /**
+   * 领域层只回答「失败在哪」，文案归视图层（S13）
+   *
+   * 只拦一种最容易复发的形态：抛错时直接塞一句中文。错误码化之后
+   * 领域层应当是 `throw new ShareError("EMPTY")` 这类写法。
+   * 不做通用国际化扫描——注释里的中文由 `codeOf` 先剥掉。
+   */
+  it("不产出用户文案：抛错只带错误码", () => {
+    const CJK_IN_THROWN = new RegExp(
+      "throw\\s+new\\s+\\w*Error\\s*\\(\\s*" +
+        "(?:\"[^\"]*[\\u4e00-\\u9fff]|'[^']*[\\u4e00-\\u9fff]|`[^`]*[\\u4e00-\\u9fff])",
+    );
+    for (const file of domainFiles) {
+      expect(
+        codeOf(file),
+        `${file} 不应在领域层抛中文文案，改为 throw new ShareError(code)`,
+      ).not.toMatch(CJK_IN_THROWN);
     }
   });
 });

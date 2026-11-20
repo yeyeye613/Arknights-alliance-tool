@@ -20,6 +20,7 @@
 import pako from "pako";
 import codebook from "@/data/opCodebook.json";
 import equipCodebook from "@/data/equipCodebook.json";
+import { ShareError } from "@/features/sharing/domain/shareErrors";
 
 /** 协议前缀（v3 使用单字符，v1/v2 的 ARKTEAM / ARKCOL 优先匹配） */
 const CODE_PREFIX = "A";
@@ -139,7 +140,7 @@ function createReader(bytes: Uint8Array): Reader {
       return pos >= bytes.length;
     },
     byte() {
-      if (pos >= bytes.length) throw new Error("分享码数据不完整");
+      if (pos >= bytes.length) throw new ShareError("INCOMPLETE");
       return bytes[pos++];
     },
     varint() {
@@ -150,12 +151,12 @@ function createReader(bytes: Uint8Array): Reader {
         result += (byte & 0x7f) * 2 ** shift;
         if ((byte & 0x80) === 0) return result;
         shift += 7;
-        if (shift > 35) throw new Error("分享码数据损坏");
+        if (shift > 35) throw new ShareError("DATA_CORRUPT");
       }
     },
     string() {
       const length = this.varint();
-      if (pos + length > bytes.length) throw new Error("分享码数据不完整");
+      if (pos + length > bytes.length) throw new ShareError("INCOMPLETE");
       const slice = bytes.subarray(pos, pos + length);
       pos += length;
       return decoder.decode(slice);
@@ -181,12 +182,12 @@ function toBase62(bytes: Uint8Array): string {
 
 function fromBase62(text: string): Uint8Array {
   if (!/^[0-9A-Za-z]+$/.test(text)) {
-    throw new Error("分享码包含非法字符");
+    throw new ShareError("BAD_CHAR");
   }
   let value = 0n;
   for (const char of text) {
     const digit = ALPHABET.indexOf(char);
-    if (digit < 0) throw new Error("分享码包含非法字符");
+    if (digit < 0) throw new ShareError("BAD_CHAR");
     value = value * 62n + BigInt(digit);
   }
   const bytes: number[] = [];
@@ -256,7 +257,7 @@ function readOperator(
 
   const name = index === ESCAPE_REF ? reader.string() : codebook[index];
   if (name === undefined) {
-    throw new Error("分享码来自更新的版本，请刷新页面后再导入");
+    throw new ShareError("VERSION_TOO_NEW");
   }
 
   let entry: DecodedOperator = name;
@@ -399,12 +400,12 @@ export function isCompactCode(code: string): boolean {
  */
 export function decodeCompact(code: string): DecodedShareData {
   const raw = fromBase62(code.slice(CODE_PREFIX.length));
-  if (!raw.length) throw new Error("分享码内容为空");
+  if (!raw.length) throw new ShareError("EMPTY_PAYLOAD");
 
   const head = raw[0];
   const magic = head & 0xf0;
   if (magic !== MAGIC && magic !== MAGIC_EQUIP) {
-    throw new Error("无效的分享码格式");
+    throw new ShareError("BAD_FORMAT");
   }
   const withEquipment = magic === MAGIC_EQUIP;
   const type = head & 0x0f;
@@ -419,7 +420,12 @@ export function decodeCompact(code: string): DecodedShareData {
 
   let payload = raw.subarray(offset);
   if (flags & FLAG_COMPRESSED) {
-    payload = pako.inflate(payload);
+    try {
+      payload = pako.inflate(payload);
+    } catch {
+      // pako 自身的报错是英文且面向开发者，不能漏到界面
+      throw new ShareError("DATA_CORRUPT");
+    }
   }
 
   const reader = createReader(payload);
@@ -437,7 +443,7 @@ export function decodeCompact(code: string): DecodedShareData {
     data.n = reader.string();
     data.teams = readTeams(reader, withEquipment);
   } else {
-    throw new Error("不支持的分享码类型");
+    throw new ShareError("UNSUPPORTED_TYPE");
   }
 
   if (versionId) data.g = versionId;

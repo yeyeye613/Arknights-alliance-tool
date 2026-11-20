@@ -3,6 +3,16 @@ import pako from "pako";
 import { useShareCode } from "@/features/sharing/composables/useShareCode.js";
 import { getCodebook } from "@/features/sharing/domain/shareCodec";
 
+/** 取出领域层抛出的错误码（文案属视图层，不在这里断言） */
+function codeOf(run) {
+  try {
+    run();
+  } catch (error) {
+    return error?.code;
+  }
+  return undefined;
+}
+
 /** 造一个真实长度的编队：12 名干员 + 4 个汉字的队名 */
 function makeTeam(name = "测试编队") {
   const names = getCodebook().slice(0, 12);
@@ -171,10 +181,10 @@ describe("useShareCode composable", () => {
   });
 
   it("should reject empty code", () => {
-    expect(() => parseCode("")).toThrow("密语不能为空");
+    expect(codeOf(() => parseCode(""))).toBe("EMPTY");
   });
 
   it("should reject invalid prefix code", () => {
-    expect(() => parseCode("INVALID")).toThrow("无效的密语格式");
+    expect(codeOf(() => parseCode("INVALID"))).toBe("LEGACY_FORMAT");
   });
 });

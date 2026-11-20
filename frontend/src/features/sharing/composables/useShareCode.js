@@ -13,6 +13,7 @@ import {
   parseShareCode,
   restoreOperators,
 } from "@/features/sharing/domain/shareImport";
+import { shareMessageOf } from "@/features/sharing/messages";
 
 export function useShareCode() {
   /**
@@ -79,7 +80,7 @@ export function useShareCode() {
 
       close?.();
     } catch (error) {
-      notify?.(error?.message || "导入失败");
+      notify?.(shareMessageOf(error, "导入失败"));
     }
   };
 

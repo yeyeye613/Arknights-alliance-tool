@@ -12,6 +12,7 @@
 import pako from "pako";
 
 import { decodeCompact, isCompactCode } from "@/features/sharing/domain/shareCodec";
+import { ShareError } from "@/features/sharing/domain/shareErrors";
 import { getAvatarUrl } from "@/shared/lib/assets.js";
 import { DEFAULT_VERSION_ID } from "@/data/versions.js";
 import type { OperatorInstance } from "@/entities/operator";
@@ -70,11 +71,11 @@ function parseLegacyCode(
   try {
     data = JSON.parse(legacyDecode(code.slice(prefixLength)));
   } catch {
-    throw new Error("分享码已损坏，请重新复制完整内容");
+    throw new ShareError("LEGACY_CORRUPT");
   }
 
   if (data.v !== 1 && data.v !== 2) {
-    throw new Error("不支持的密语版本");
+    throw new ShareError("LEGACY_VERSION");
   }
 
   // 兼容：t 与 type 统一
@@ -93,7 +94,7 @@ export function parseShareCode(
 ): ParsedShareData {
   const code = String(rawCode ?? "").replace(/\s+/g, "");
   if (!code) {
-    throw new Error("密语不能为空");
+    throw new ShareError("EMPTY");
   }
 
   // 历史前缀 ARKTEAM / ARKCOL 也以 A 开头，必须先判断
@@ -110,7 +111,7 @@ export function parseShareCode(
     return data;
   }
 
-  throw new Error("无效的密语格式");
+  throw new ShareError("LEGACY_FORMAT");
 }
 
 /**
@@ -175,7 +176,7 @@ export function mapImportedTeam(
   const team = restoreOperators(data?.ops, data?.g);
 
   if (team.length === 0) {
-    throw new Error("编队中没有有效干员");
+    throw new ShareError("NO_OPERATOR");
   }
 
   return {
@@ -210,7 +211,7 @@ export function mapImportedCollection(
     .filter((team) => team.team.length > 0);
 
   if (teams.length === 0) {
-    throw new Error("合集中没有有效编队");
+    throw new ShareError("NO_COLLECTION");
   }
 
   return {

@@ -15,6 +15,22 @@ import pako from "pako";
 import { encodeTeam, encodeCollection } from "@/features/sharing/domain/shareCodec";
 import { useShareCode } from "@/features/sharing/composables/useShareCode.js";
 
+/**
+ * 取出领域层抛出的错误码
+ *
+ * 断言 code 而不是中文文案：文案属视图层（`features/sharing/messages.ts`），
+ * 改措辞不该让协议测试变红。本文件下面那四个固定串快照仍是协议的
+ * 唯一权威——它们没有因此改动一个字符。
+ */
+function codeOf(run) {
+  try {
+    run();
+  } catch (error) {
+    return error?.code;
+  }
+  return undefined;
+}
+
 /** 固定输入 → 固定输出，用于锁定 v3 编码行为 */
 const FIXTURES = {
   plain: {
@@ -177,12 +193,12 @@ describe("历史分享码兼容", () => {
       n: "空队",
       ops: ["并不存在的干员"],
     });
-    expect(() => importTeam(parseCode(code))).toThrow("编队中没有有效干员");
+    expect(codeOf(() => importTeam(parseCode(code)))).toBe("NO_OPERATOR");
   });
 
   it("不支持的旧版本号会被拒绝", () => {
     const code = makeLegacyCode("ARKTEAM", { v: 9, t: "team", n: "x", ops: [] });
-    expect(() => parseCode(code)).toThrow("不支持的密语版本");
+    expect(codeOf(() => parseCode(code))).toBe("LEGACY_VERSION");
   });
 });
 
@@ -190,16 +206,16 @@ describe("非法输入", () => {
   const { parseCode } = useShareCode();
 
   it("空码报错", () => {
-    expect(() => parseCode("")).toThrow("密语不能为空");
-    expect(() => parseCode("   ")).toThrow("密语不能为空");
-    expect(() => parseCode(null)).toThrow("密语不能为空");
+    expect(codeOf(() => parseCode(""))).toBe("EMPTY");
+    expect(codeOf(() => parseCode("   "))).toBe("EMPTY");
+    expect(codeOf(() => parseCode(null))).toBe("EMPTY");
   });
 
   it("未知格式报错", () => {
-    expect(() => parseCode("not-a-code")).toThrow("无效的密语格式");
+    expect(codeOf(() => parseCode("not-a-code"))).toBe("LEGACY_FORMAT");
   });
 
   it("损坏的历史码报错", () => {
-    expect(() => parseCode("ARKTEAM这不是base64")).toThrow("分享码已损坏");
+    expect(codeOf(() => parseCode("ARKTEAM这不是base64"))).toBe("LEGACY_CORRUPT");
   });
 });
