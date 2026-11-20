@@ -12,7 +12,7 @@
 import { describe, it, expect } from "vitest";
 import pako from "pako";
 
-import { encodeTeam, encodeCollection } from "@/features/sharing/domain/shareCodec.js";
+import { encodeTeam, encodeCollection } from "@/features/sharing/domain/shareCodec";
 import { useShareCode } from "@/features/sharing/composables/useShareCode.js";
 
 /** 固定输入 → 固定输出，用于锁定 v3 编码行为 */

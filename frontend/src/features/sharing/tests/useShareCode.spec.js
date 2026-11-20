@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import pako from "pako";
 import { useShareCode } from "@/features/sharing/composables/useShareCode.js";
-import { getCodebook } from "@/features/sharing/domain/shareCodec.js";
+import { getCodebook } from "@/features/sharing/domain/shareCodec";
 
 /** 造一个真实长度的编队：12 名干员 + 4 个汉字的队名 */
 function makeTeam(name = "测试编队") {

@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * 游戏版本注册表
  *
@@ -20,6 +21,12 @@ import {
   getOperatorEquipmentNames,
 } from "@/features/equipment/domain/equipRules";
 
+/**
+ * 自选干员配置的索引视图
+ * @type {Record<string, { tier?: string, covenants?: string[], traits?: Array<Object> }>}
+ */
+const SELF_OPS = selfOpConfig;
+
 /** 默认版本：保持与历史存档兼容 */
 export const DEFAULT_VERSION_ID = "mengyue";
 
@@ -28,6 +35,37 @@ export const CORE_GROUP = "core";
 /** 附加盟约分组标识 */
 export const ADDITIONAL_GROUP = "additional";
 
+/**
+ * 版本注册表条目
+ *
+ * 这是 data 层自己的契约，不从 entities 反向 import 类型——
+ * 依赖方向只能是 entities → data。
+ * @typedef {Object} VersionEntry
+ * @property {string} id
+ * @property {string} label
+ * @property {string} [shortLabel]
+ * @property {string} [badge]
+ * @property {string} [desc]
+ * @property {string} [source]
+ * @property {"direct"|"faction"} [selfOperatorStrategy]
+ * @property {"faction"|"covenant"} [banStrategy]
+ * @property {Record<string, any>} covenants
+ * @property {Record<string, any>} operators
+ * @property {Record<string, any>} [equipments]
+ */
+
+/**
+ * 领域函数可以接受的最小版本形状
+ * 允许注册表条目、ref 里的对象，或测试里手工构造的桩
+ * @typedef {Object} VersionLike
+ * @property {Record<string, any>} [covenants]
+ * @property {Record<string, any>} [operators]
+ * @property {Record<string, any>} [equipments]
+ * @property {"faction"|"covenant"} [banStrategy]
+ * @property {"direct"|"faction"} [selfOperatorStrategy]
+ */
+
+/** @type {VersionEntry[]} */
 export const GAME_VERSIONS = [
   {
     id: "mengyue",
@@ -61,15 +99,16 @@ export const GAME_VERSIONS = [
   },
 ];
 
+/** @type {Record<string, VersionEntry>} */
 const VERSION_MAP = GAME_VERSIONS.reduce((acc, version) => {
   acc[version.id] = version;
   return acc;
-}, {});
+}, /** @type {Record<string, VersionEntry>} */ ({}));
 
 /**
  * 按 id 获取版本数据，找不到时回退到默认版本
  * @param {string} id - 版本 id
- * @returns {Object} 版本数据
+ * @returns {VersionEntry} 版本数据
  */
 export function getGameVersion(id) {
   return VERSION_MAP[id] || VERSION_MAP[DEFAULT_VERSION_ID];
@@ -86,7 +125,7 @@ export function isValidVersionId(id) {
 
 /**
  * 取某个版本指定分组的盟约名称列表
- * @param {Object} version - 版本数据
+ * @param {VersionLike} version - 版本数据
  * @param {string} group - core / additional
  * @returns {Array<string>} 盟约名称
  */
@@ -101,17 +140,18 @@ export function getCovenantsByGroup(version, group) {
  * 解析干员的盟约列表（兼容自选干员）
  * - 版本干员池中存在的干员直接取数据
  * - 自选干员按版本的策略推断：盟约版直接取登记值，规程版按阵营匹配核心盟约
- * @param {string} name - 干员名
- * @param {Object} version - 版本数据
+ * @param {string|undefined} name - 干员名
+ * @param {VersionLike} version - 版本数据
  * @returns {Array<string>} 盟约名称列表
  */
 export function getOperatorCovenants(name, version) {
-  const direct = version?.operators?.[name];
+  const key = name ?? "";
+  const direct = version?.operators?.[key];
   if (direct?.covenants) {
     return direct.covenants;
   }
 
-  const selfOp = selfOpConfig[name];
+  const selfOp = SELF_OPS[key];
   if (!selfOp?.covenants) {
     return [];
   }
@@ -121,15 +161,17 @@ export function getOperatorCovenants(name, version) {
   }
 
   const coreCovenants = getCovenantsByGroup(version, CORE_GROUP);
-  const matched = selfOp.covenants.filter((cov) => coreCovenants.includes(cov));
+  const matched = selfOp.covenants.filter((/** @type {string} */ cov) =>
+    coreCovenants.includes(cov),
+  );
   return matched.length > 0 ? matched : ["协防干员"];
 }
 
 /**
  * 解析干员的有效盟约（含装备加成）
  * 「变形同构体」与指定装备同携时，携带者视为对应盟约成员
- * @param {Object|string} op - 编队干员 { name, equipments? } 或干员名
- * @param {Object} version - 版本数据
+ * @param {{ name?: string, equipments?: string[] }|string} op - 编队干员或干员名
+ * @param {VersionLike} version - 版本数据
  * @returns {Array<string>} 盟约名称列表
  */
 export function getEffectiveOperatorCovenants(op, version) {
@@ -146,23 +188,25 @@ export function getEffectiveOperatorCovenants(op, version) {
 
 /**
  * 解析干员等阶（兼容自选干员）
- * @param {string} name - 干员名
- * @param {Object} version - 版本数据
+ * @param {string|undefined} name - 干员名
+ * @param {VersionLike} version - 版本数据
  * @returns {string} 等阶，如 Ⅰ Ⅱ
  */
 export function getOperatorTier(name, version) {
-  return version?.operators?.[name]?.tier || selfOpConfig[name]?.tier || "";
+  const key = name ?? "";
+  return version?.operators?.[key]?.tier || SELF_OPS[key]?.tier || "";
 }
 
 /**
  * 解析干员特质列表（兼容自选干员）
- * @param {string} name - 干员名
- * @param {Object} version - 版本数据
+ * @param {string|undefined} name - 干员名
+ * @param {VersionLike} version - 版本数据
  * @returns {Array<Object>} 特质列表 [{ type, trigger?, description, upgraded? }]
  */
 export function getOperatorTraits(name, version) {
+  const key = name ?? "";
   return (
-    version?.operators?.[name]?.traits || selfOpConfig[name]?.traits || []
+    version?.operators?.[key]?.traits || SELF_OPS[key]?.traits || []
   ).filter(Boolean);
 }
 
@@ -175,7 +219,7 @@ export function getOperatorTraits(name, version) {
  * @returns {boolean}
  */
 export function isSelfOperatorRegistered(name) {
-  return Boolean(selfOpConfig[name]);
+  return Boolean(SELF_OPS[name]);
 }
 
 /**
@@ -190,7 +234,7 @@ export function findOperatorEverywhere(name) {
       return data;
     }
   }
-  return selfOpConfig[name] || null;
+  return SELF_OPS[name] || null;
 }
 
 /**

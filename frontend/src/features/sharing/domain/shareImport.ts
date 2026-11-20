@@ -11,7 +11,7 @@
  */
 import pako from "pako";
 
-import { decodeCompact, isCompactCode } from "@/features/sharing/domain/shareCodec.js";
+import { decodeCompact, isCompactCode } from "@/features/sharing/domain/shareCodec";
 import { getAvatarUrl } from "@/shared/lib/assets.js";
 import { DEFAULT_VERSION_ID } from "@/data/versions.js";
 import type { OperatorInstance } from "@/entities/operator";

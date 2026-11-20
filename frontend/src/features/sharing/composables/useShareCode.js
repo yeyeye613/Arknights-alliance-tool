@@ -6,7 +6,7 @@
  * 1. 生成码（薄包装 shareCodec）
  * 2. 导入编排（把映射结果交给调用方提供的回调去落库）
  */
-import { encodeCollection, encodeTeam } from "@/features/sharing/domain/shareCodec.js";
+import { encodeCollection, encodeTeam } from "@/features/sharing/domain/shareCodec";
 import {
   mapImportedCollection,
   mapImportedTeam,
