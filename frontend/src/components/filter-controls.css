@@ -1,0 +1,91 @@
+/* 筛选控件的共享样式
+ *
+ * PoolFilters 与 CovenantFilterRow 都要用这套「行 + chip」外观，
+ * 用 <style scoped src> 引入：仓库里只有一份定义，构建时各自作用域化，
+ * 避免两个组件各抄一遍导致数值漂移（.op-unit 就是这么漂成 75/78 的）。
+ *
+ * 只放两边都用的选择器；.cov-icon / .cov-hint 等单边样式放在组件自己的 style 里。
+ */
+
+.icon-filter-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+}
+
+.row-label {
+  flex: 0 0 30px;
+  font-size: 12px;
+  color: #888;
+  line-height: 32px;
+  text-align: right;
+  user-select: none;
+}
+
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.chip {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  color: #bbb;
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    background 0.15s;
+}
+
+.chip:hover {
+  border-color: #888;
+  color: #fff;
+}
+
+.chip.active {
+  background: rgba(255, 207, 0, 0.16);
+  border-color: #ffcf00;
+  color: #ffcf00;
+  font-weight: bold;
+}
+
+.chip-divider {
+  width: 1px;
+  height: 16px;
+  background: #444;
+  margin: 0 4px;
+}
+
+@media (max-width: 1024px) {
+  .row-label {
+    flex-basis: 34px;
+  }
+}
+
+@media (max-width: 768px) {
+  .row-label {
+    flex-basis: 30px;
+    font-size: 11px;
+    line-height: 30px;
+  }
+
+  .icon-filter-row {
+    gap: 6px;
+  }
+
+  .chip {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+}
