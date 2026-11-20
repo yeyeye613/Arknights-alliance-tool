@@ -12,9 +12,10 @@ src/
 ├─ components/                  23 个组件 + 1 份共享筛选样式（面板 7 / 子视图 6 / 弹窗 6 / 浮层 2 / 其它 2）
 ├─ composables/                 13 个组合式函数（状态、持久化、浮层、响应式胶水、PWA）
 ├─ domain/                      7 个纯函数模块 + 类型定义（无 Vue、无 DOM）
+├─ infrastructure/storage/      4 个持久化模块：键常量、读写器、编队仓储、偏好仓储
 ├─ data/                        版本注册表 + 10 份数据集 + 装备数据访问
 ├─ utils/                       分享码编解码、图片地址
-└─ tests/                       17 个 Vitest 测试文件
+└─ tests/                       22 个 Vitest 测试文件
 ```
 
 ---
@@ -40,7 +41,7 @@ src/
 | --- | --- | --- | --- |
 | `PoolPanel.vue` | 干员池布局：折叠条、拖拽网格、空态、自选干员弹窗；组合 `PoolFilters` 与 `OperatorCard` | emits: `addToTeam` | `useGameVersion`、`usePoolFilters`、`useSelfOperators`、`useTraitTooltip`、`useCovenantTooltip`、`PoolFilters`、`OperatorCard`、`AddOpPanel`、`vue-draggable-plus` |
 | `TeamPanel.vue` | 当前编队布局与**装配编排**：装备三条入口（拖放 / 点选 / 选择器）、卸下、上限截断、悬停提示；Sortable 容器与 `slot name="staging"` | props: `team` `teamLimit` `dropHint` `selectedEquipment`；emits: `update:team` `update:teamLimit` `save-team` `clear-team` `remove-from-team` `notify` `equipment-equipped` | `useCovenantStats`、`domain/equipRules`、`domain/teamRules`、`useEquipmentDrag`、`TeamHeader`、`OperatorSlot`、`ActiveEffectsList`、`CovenantsPanel`、`EquipmentPicker` |
-| `SavedTeamsPanel.vue` | 已保存编队与合集：按当前版本过滤视图、展开收起、合集与未归类两组、加载 / 分享 / 编辑 / 移动 / 删除入口 | props: `savedTeams` `teamCollections` `currentVersionId`；emits: `loadTeam` `shareTeam` `shareCollection` `editTeam` `moveToCollection` `deleteTeam` `showImportModal` | `domain/teamRules`、`data/versions.js`（`DEFAULT_VERSION_ID`）、`TeamCard` |
+| `SavedTeamsPanel.vue` | 已保存编队与合集：按当前版本过滤视图、合集与未归类两组、加载 / 分享 / 编辑 / 移动 / 删除入口；**询问目标合集名与合集展开态都在这里**（`prompt` 与 `toggleCollection` 不上移到 composable） | props: `savedTeams` `teamCollections` `currentVersionId`；emits: `loadTeam` `shareTeam` `shareCollection` `editTeam` `moveToCollection`（载荷 `{ teamItem, fromCollectionName, savedIndex, targetCollectionName }`）`deleteTeam` `toggleCollection` `showImportModal` | `domain/teamRules`、`data/versions.js`（`DEFAULT_VERSION_ID`）、`TeamCard` |
 | `CovenantsPanel.vue` | 编队盟约栏：展示出现的盟约、人数、进阶等级、变形同构体加成，悬停出效果浮层 | props: `presentCovList` `presentCovCounts` `advancedCovLevels` `morphCovCounts` | `useGameVersion`、`useCovenantTooltip` |
 | `EquipmentPool.vue` | 装备池标签页：按等阶与关键词筛选 70 件装备，点击放入临时装备池，可拖拽 | props: `staged`；emits: `stage` | `data/equipment.js`、`useEquipmentDrag` |
 | `EquipmentStaging.vue` | 临时装备池：暂存待分配装备、选中态、拖拽载荷标记来源为 `staging` | props: `items` `selected`；emits: `select` `remove` `clear` | `useEquipmentDrag` |
@@ -65,7 +66,7 @@ src/
 | 组件 | 职责 | Props / Emits |
 | --- | --- | --- |
 | `BaseModal.vue` | 弹窗骨架：遮罩、标题、关闭、`contentClass` 透传、点遮罩关闭可关 | props: `show` `title` `contentClass` `closeOnOverlay`；emits: `close` |
-| `SaveTeamModal.vue` | 保存 / 编辑编队：名称输入、选择合集、自动聚焦 | props: `show` `currentTeam` `teamCollections` `isEdit` `editTeamData`；emits: `close` `save` `update` |
+| `SaveTeamModal.vue` | 保存 / 编辑编队：名称输入、选择合集（下拉值用**合集名**，不用下标）、自动聚焦 | props: `show` `currentTeam` `teamCollections` `isEdit` `editTeamData`；emits: `close` `save` `update` |
 | `ShareModal.vue` | 展示分享码：只读输入框自动全选、复制、编队 / 合集预览、装备数量提示 | props: `show` `title` `shareCode` `shareType` `previewData`；emits: `close` |
 | `ImportModal.vue` | 导入分享码：粘贴即解析、错误信息、解析后预览、确认导入 | props: `show`；emits: `close` `import` |
 | `AddOpPanel.vue` | 自选（甄选）干员：从 `selfOp.json` 选人，五阶 / 六阶各限 2 名 | props: `show` `selectedOperators`；emits: `close` `confirm` |
@@ -103,14 +104,14 @@ src/
 
 | 模块 | 职责 | 存储 | 主要导出 |
 | --- | --- | --- | --- |
-| `useGameVersion.js` | **模块级单例**版本状态：读缓存、校验、切换、派生当前版本的盟约 / 干员 / 核心 / 附加分组 | `arknights_game_version` | `versions` `currentVersionId` `currentVersion` `covenants` `operators` `coreCovenants` `additionalCovenants` `setVersion` |
+| `useGameVersion.js` | **模块级单例**版本状态：读缓存、校验、切换、派生当前版本的盟约 / 干员 / 核心 / 附加分组 | `preferencesRepository`（版本 id） | `versions` `currentVersionId` `currentVersion` `covenants` `operators` `coreCovenants` `additionalCovenants` `setVersion` |
 | `useTeamManagement.js` | 当前编队（会话级）：入队、移除、上限截断、清空、加载（规则来自 `teamRules`） | 无 | `team` `addToTeam` `removeFromTeam` `handleLimitChange` `clearTeam` `loadTeam` |
-| `useTeamStorage.js` | 编队与合集持久化：初始化、保存、更新、删除、移动到合集；合集为空时自动回收 | `arknights_saved_teams`、`arknights_team_collections` | `savedTeams` `teamCollections` `initSavedTeams` `saveAllData` `saveCollections` `addOrUpdateTeam` `deleteTeam` `moveToCollection`，以及包了提示文案的 `saveTeam` / `updateTeam` / `deleteTeamOp` / `moveToCollectionOp` |
+| `useTeamStorage.js` | 编队与合集的**内存状态与编排**：初始化、保存、更新、删除、移动到合集；合集为空时自动回收。持久化细节在 `teamsRepository`；合集引用一律用名字，不用下标 | `teamsRepository` | `savedTeams` `teamCollections` `initSavedTeams` `saveAllData` `saveCollections` `addOrUpdateTeam` `deleteTeam` `moveToCollection`，以及包了提示文案的 `saveTeam` / `updateTeam` / `deleteTeamOp` / `moveToCollectionOp` |
 | `useShareCode.js` | 分享码门面：生成码 + 导入编排；解析与映射委托 `domain/shareImport` | 无（落库由调用方回调完成） | `generateTeamCode` `generateCollectionCode` `parseCode` `restoreOperators` `importTeam` `importCollection` `importFromCode` |
 | `useCovenantStats.js` | 盟约统计的响应式胶水：`computed` 包 `computeCovenantStats` | 无 | `presentCovCounts` `presentCovList` `activeCovList` `advancedCovLevels` `morphCovCounts` `covenantsData` `coreCovenants` |
-| `useModalState.js` | 弹窗开关、临时提示（2 秒自动消失）、编辑态记录、分享预览数据 | 无 | `showTeamModal` `showShareModal` `showImportModal` `tempMessage` `openSaveTeamModal` `editTeam` `showTempMessage` 等 |
-| `usePoolFilters.js` | 干员池筛选状态：6 个维度 + Ban 列表 + 折叠 / 视图偏好 + 已选摘要 + 切版本清理（匹配规则在 `domain/filterOperators`） | `arknights_pool_filter_view`、`arknights_pool_filter_collapsed` | `filters` `banned` `collapsed` `viewMode` `traitTypeOptions` `traitTriggerOptions` `activeFilterList` `banState` `setFilter` `toggleCov` `clearFilter` `clearAllFilters` |
-| `useSelfOperators.js` | 自选（甄选）干员：读取时按 `selfOp.json` + Ⅴ/Ⅵ 阶重算，变更落盘 | `arknights_selected_self_operators` | `selfOperators`；另导出 `normalizeSelfOperators` 供测试与导入复用 |
+| `useModalState.js` | 弹窗开关、临时提示（2 秒自动消失）、编辑态记录（`{ collectionName, teamIndex }`）、分享预览数据 | 无 | `showTeamModal` `showShareModal` `showImportModal` `tempMessage` `openSaveTeamModal` `editTeam` `showTempMessage` 等 |
+| `usePoolFilters.js` | 干员池筛选状态：6 个维度 + Ban 列表 + 折叠 / 视图偏好 + 已选摘要 + 切版本清理（匹配规则在 `domain/filterOperators`） | `preferencesRepository`（视图 / 折叠） | `filters` `banned` `collapsed` `viewMode` `traitTypeOptions` `traitTriggerOptions` `activeFilterList` `banState` `setFilter` `toggleCov` `clearFilter` `clearAllFilters` |
+| `useSelfOperators.js` | 自选（甄选）干员：读取时按 `selfOp.json` + Ⅴ/Ⅵ 阶重算，变更落盘 | `preferencesRepository`（自选干员） | `selfOperators`；另导出 `normalizeSelfOperators` 供测试与导入复用 |
 | `useTooltip.js` | 悬停浮层的公共实现：定位、贴边收拢、触屏 2.6 秒自动消失、`isCoarsePointer` | 无 | `createTooltip({ width, height, initialState })` `isCoarsePointer` `TOUCH_HIDE_DELAY` |
 | `useTraitTooltip.js` | 特质浮层单例：用 `createTooltip` 实例化，只描述「特质浮层装什么」 | 无 | `showTraitTooltip` `moveTraitTooltip` `hideTraitTooltip` `useTraitTooltipState` |
 | `useCovenantTooltip.js` | 盟约浮层单例：同上，额外带编队人数 / 进阶 / 变形同构体 | 无 | `showCovenantTooltip` `moveCovenantTooltip` `hideCovenantTooltip` `isCoarsePointer`（re-export） `useCovenantTooltipState` |
@@ -123,12 +124,27 @@ src/
 | --- | --- | --- |
 | 当前版本 id | `useGameVersion`（模块级单例） | 跨组件、跨刷新 |
 | 当前编队 | `App.vue` ← `useTeamManagement` | 会话，刷新即丢（未保存时） |
-| 已保存编队 / 合集 | `useTeamStorage` | 跨刷新 |
+| 已保存编队 / 合集 | `useTeamStorage`（落库经 `teamsRepository`） | 跨刷新 |
 | 临时装备池、选中装备 | `App.vue` 局部 `ref` | 会话 |
 | 弹窗开关、提示文案 | `useModalState` | 会话 |
 | 浮层坐标与内容 | `useTraitTooltip` / `useCovenantTooltip`（共用 `useTooltip` 的控制器） | 会话 |
-| 筛选条件、折叠偏好 | `usePoolFilters`（+ `localStorage`） | 跨刷新 |
-| 自选干员 | `useSelfOperators`（+ `localStorage`） | 跨刷新 |
+| 筛选条件、折叠偏好 | `usePoolFilters`（+ `preferencesRepository`） | 跨刷新 |
+| 自选干员 | `useSelfOperators`（+ `preferencesRepository`） | 跨刷新 |
+
+---
+
+## 基础设施层（infrastructure/storage）
+
+| 模块 | 职责 | 主要导出 | 行数 |
+| --- | --- | --- | --- |
+| `keys.ts` | 6 个键名常量，**值冻结**（改名 = 老用户存档全丢）；键名字面量只允许出现在这里 | `STORAGE_KEYS` `StorageKey` | 26 |
+| `localStore.ts` | `readJSON` / `writeJSON` / `readText` / `writeText`：统一 try/catch，解析失败回退、写入失败只告警 | 同名 4 个函数 | 77 |
+| `teamsRepository.ts` | 编队与合集存取：读回补 `expanded: true`，落库剥离 `expanded`；损坏存档回退空数组 | `loadTeams` `loadCollections` `saveTeams` `saveCollections` `toPersistedCollection` `PersistedCollection` | 53 |
+| `preferencesRepository.ts` | 四类偏好：版本 id、筛选视图、筛选折叠、自选干员；把 `"1"/"0"`、`icon/text` 这类编码收在一处 | `getVersionId` `setVersionId` `getFilterView` `setFilterView` `getFilterCollapsed` `setFilterCollapsed` `getSelfOperators` `setSelfOperators` `FilterView` | 55 |
+
+边界：只被 `composables` 调用，自身不 import `composables` / `components`；不判断数据合法性（那是 composable 的事）。
+
+存档兼容性由 `src/tests/storageCompat.spec.js` 锁住：用例里用真实旧存档 JSON 与键名字面量，不引用 `STORAGE_KEYS`——引用常量就测不出改名。
 
 ---
 

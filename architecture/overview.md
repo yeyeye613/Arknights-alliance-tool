@@ -72,27 +72,42 @@ flowchart TB
     IMG["index.js<br/>图片地址"]
   end
 
+  subgraph INFRA["基础设施层 · src/infrastructure/storage"]
+    direction LR
+    KEYS["keys.ts<br/>键名常量（值冻结）"]
+    LSTORE["localStore.ts<br/>JSON / 文本读写与兜底"]
+    RT["teamsRepository.ts<br/>编队与合集"]
+    RP["preferencesRepository.ts<br/>版本 / 筛选 / 自选干员"]
+  end
+
   VIEW --> COMPOSABLE
   COMPOSABLE --> DOMAIN
   COMPOSABLE --> DATA
+  COMPOSABLE --> INFRA
   DOMAIN --> DATA
   DOMAIN --> UTIL
   VIEW --> UTIL
   DATA --> JSON
   DATA --> EQ
+  RT --> LSTORE
+  RP --> LSTORE
+  RT --> KEYS
+  RP --> KEYS
 
   LS[("localStorage")]
-  COMPOSABLE --> LS
+  LSTORE --> LS
 ```
 
 ### 依赖规则
 
 1. **视图层不碰数据文件**。组件通过 `useGameVersion()` 拿到当前版本的 `covenants` / `operators`，或调用 `data/versions.js` 的解析函数；不 `import` 任何 `*.json`。已知例外只有 `AddOpPanel` 直接读 `selfOp.json`（自选池候选列表），待 P4 收敛到访问器。
-2. **视图层不碰 `localStorage`**。持久化一律在 composable 内完成。P2 之后组件里已经没有任何 `localStorage` 调用（筛选偏好与自选干员分别归 `usePoolFilters` / `useSelfOperators`）。
+2. **视图层与 composable 都不碰 `localStorage`**。持久化统一走 `src/infrastructure/storage`：composable 调仓储（`teamsRepository` / `preferencesRepository`），仓储调 `localStore`，键名只出现在 `keys.ts`。P3 之后 `src` 内除 `infrastructure/` 只剩 `tests/` 还会出现这个词。
 3. **领域层不碰 DOM**。`useTraitTooltip` / `useCovenantTooltip` 持有的是浮层的坐标与内容状态，真正挂载由组件 `teleport` 到 `body` 完成。
 4. **`src/domain` 是纯函数区**。统计、筛选、Ban、上限、装备规则、分享码映射都在这里，不 `import vue`、不读写 `localStorage`、不调 `alert`，由 `src/tests/domainBoundaries.spec.js` 读源码校验。它只允许依赖 `data/` 与 `utils/`，不允许反向依赖 `components` / `composables`。
 5. **工具层无状态**。`shareCodec.js` 是纯函数集合，可脱离 Vue 单独测试。
 6. **唯一组合根是 `App.vue`**。所有 composable 在此实例化，结果通过 props 下发、通过 emits 上抛；需要写别的模块的状态时用回调注入（如 `importFromCode(data, { addTeam })`），不传 ref 进去 push。
+7. **基础设施层只依赖 `data/` 与同层文件**，不 import `composables` / `components`。它只回答「怎么存取」，不回答「数据合不合法」——版本 id 是否注册、自选干员阶数是否有效，仍是 composable 的判断。
+8. **composable 不弹对话框**。满员、空编队这类拒绝用返回值表达（`addToTeam` / `openSaveTeamModal` 返回 `boolean`），提示文案与 `prompt` 询问留在视图层，这样 composable 可以在没有 DOM 的环境里直接测。
 
 ## 关键设计决策
 

@@ -189,7 +189,7 @@ erDiagram
 | `team` | `TeamOperator[]` | 干员数组（结构同上） |
 | `createTime` | `string` | `toLocaleString()` 结果，仅展示 |
 | `version` | `string` | 可选。所属版本 id，**缺省视为 `mengyue`**（兼容历史存档） |
-| `teamIndex` / `collectionIndex` | `number` | 仅编辑弹窗临时注入，不落库 |
+| `teamIndex` / `collectionName` | `number` / `string` | 仅编辑弹窗临时注入，不落库。合集一律用**名字**定位，索引会随合集增删漂移 |
 
 ### 3. 合集 `TeamCollection`
 
@@ -204,16 +204,23 @@ erDiagram
 
 ### 4. 持久化键
 
-| 键 | 内容 | 写入方 |
-| --- | --- | --- |
-| `arknights_saved_teams` | `SavedTeam[]`（未归类） | `useTeamStorage.saveAllData` |
-| `arknights_team_collections` | `TeamCollection[]`（已剥离 `expanded`） | `useTeamStorage.saveCollections` |
-| `arknights_game_version` | 版本 id 字符串 | `useGameVersion.setVersion` |
-| `arknights_selected_self_operators` | `{ name, tier, covenants, traits }[]` | `PoolPanel` 的 watcher |
-| `arknights_pool_filter_view` | `icon` \| `text` | `PoolPanel` |
-| `arknights_pool_filter_collapsed` | `"true"` \| `"false"` | `PoolPanel` |
+键名集中在 `src/infrastructure/storage/keys.ts`（`STORAGE_KEYS`），**值已冻结**：改名等于老用户存档全丢，只允许新增键。读写统一经 `localStore.ts`，仓储层再按用途分组。
 
-约定：**每个键独立 try/catch**，解析失败时回退到空数组或默认值，不允许因单条脏数据导致整页白屏。
+| 键 | 内容 | 仓储 / 写入方 |
+| --- | --- | --- |
+| `arknights_saved_teams` | `SavedTeam[]`（未归类） | `teamsRepository.saveTeams` ← `useTeamStorage` |
+| `arknights_team_collections` | `TeamCollection[]`（已剥离 `expanded`） | `teamsRepository.saveCollections` ← `useTeamStorage` |
+| `arknights_game_version` | 版本 id 字符串 | `preferencesRepository.setVersionId` ← `useGameVersion` |
+| `arknights_selected_self_operators` | `{ name, tier, avatar, isSelfOperator }[]` | `preferencesRepository.setSelfOperators` ← `useSelfOperators` |
+| `arknights_pool_filter_view` | `icon` \| `text` | `preferencesRepository.setFilterView` ← `usePoolFilters` |
+| `arknights_pool_filter_collapsed` | `"1"` \| `"0"` | `preferencesRepository.setFilterCollapsed` ← `usePoolFilters` |
+
+约定：
+
+- **每次访问（读或写）各自 try/catch**，解析失败回退空数组或默认值，不因单条脏数据整页白屏；写入失败（配额满 / 隐私模式）只告警，不打断操作。
+- 存档是合法 JSON 但不是数组（被手动改过）时，按「读不出来」处理。
+- 页面渲染之外的代码不再出现 `localStorage`：`grep -rn "localStorage" src | grep -v infrastructure` 应只剩 `tests/`。
+- 当前没有 `schemaVersion` 字段：P3 未新增存档字段，等真需要迁移时再加，避免空转。
 
 ---
 

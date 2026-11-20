@@ -122,7 +122,7 @@ flowchart TB
 
 ## 4. 问题清单与证据
 
-### 4.1 已完成（P0 / P1 / P2）
+### 4.1 已完成（P0 / P1 / P2 / P3）
 
 | # | 问题 | 处理方式 |
 | --- | --- | --- |
@@ -142,21 +142,20 @@ flowchart TB
 | S2' | `TeamPanel` 模板 169 行混装 header / 盟约条 / 网格 / 插槽 / 选择器 / 效果列表 | 模板 169 → 70 行；header、槽位、效果列表各自成组件，`slot name="staging"` 与 Sortable 参数原样保留 |
 | S4 | `.op-unit` 两处各写一遍且不一致（75px / 78px） | 合并到 `OperatorCard.vue` 一处，统一 75px；`grep -c "\.op-unit {"` 全仓 = 1 |
 | S5 | 两个 tooltip composable 约 95% 重复 | 抽 `useTooltip.js` 的 `createTooltip()`；两个 composable 只剩「浮层装什么」，共 122 行（原 211 行） |
-| S9（部分） | 同一 localStorage 键多处分散写入 | 自选干员键已收口到 `useSelfOperators`；编队 / 合集 5 处仍留 P3 |
+| S9 | 同一 localStorage 键多处分散写入 | P3 收口：6 个键只在 `infrastructure/storage/keys.ts` 定义，写入全部经 `localStore` + 仓储，`src` 内已无散落调用 |
+| S10 | composable 直接读写 3 个持久化键 | P3 收口到 `preferencesRepository`，`useGameVersion` / `usePoolFilters` / `useSelfOperators` 内已无存储细节 |
+| F2 | 领域层 / composable 直接 `alert` | P3 改为返回值（`addToTeam` / `openSaveTeamModal` 返回 `false`），提示与 `prompt` 归视图层 |
+| D5 | 合集用索引引用，重排即失效 | P3 改为合计名 + `teamIndex`；顺带修了三个真实缺陷（见 P3 偏差） |
 
 ### 4.2 待处理
 
 | # | 问题 | 证据 | 处理阶段 |
 | --- | --- | --- | --- |
-| S9（剩余） | 编队与合集的 `arknights_saved_teams` 仍在 5 处写入 | `useTeamStorage.js:89,116,135,163,67` | P3 |
-| S10 | composable 直接读写 3 个持久化键 | `useSelfOperators`（自选）/ `usePoolFilters`（视图、折叠） | P3 |
-| F2 | 领域层直接 `alert` | `useTeamManagement.js`、`useModalState.js` | P3 |
 | D1 | 盟约 ↔ 干员双向引用已漂移（盟约版 15 处多出 / 11 处漏收） | 脚本比对 `covenant.operators` 与 `operator.covenants` | P5 |
 | D2 | `covenant.operators` 全仓无运行时读取，是脏数据 | `grep "\.operators"` 只命中 `version.operators` | P5 |
 | D3 | 干员实例 4 处各自拼装，字段不一致 | `PoolPanel.baseOperators` / `useSelfOperators` / `AddOpPanel` / `shareImport.restoreOperators` | P5 |
-| D5 | 合集用**索引**引用，重排即失效 | `SaveTeamModal` 提交 `collectionIndex`，`useTeamStorage:179` 用下标取名字 | P3 |
 | S11 | 业务逻辑全是 JS，`vue-tsc` 只覆盖 2 个文件 | 17 个 SFC 无 `lang="ts"` | P5（渐进 `@ts-check`） |
-| S13 | 业务文案散在领域层与视图层 | 「装备槽已满」在 `TeamPanel`；「最多 2 名」在 `AddOpPanel` | P3 |
+| S13 | 业务文案散在领域层与视图层 | 「装备槽已满」在 `TeamPanel`；「最多 2 名」在 `AddOpPanel` | P5（P3 只处理了 alert/prompt，文案统一未做） |
 
 ---
 
@@ -457,7 +456,7 @@ flowchart LR
    - `TeamPanel` script 227 行（目标 ≤150）。剩下的是装备装配编排（拖放、点选、选择器、卸下）与 Sortable 容器，再抽会得到一个返回 13 项、把 `props.team` / `emit` 耦合藏起来的 composable —— 第 12 节已把这条列为不建议。
    - 两个文件总行数 418 / 367 也超过「单文件 ≤300 行」。原因是样式占 43%–60%，而第 12 节明确不动样式体系；按「一行脚本 + 一行 CSS」同权重算行数没有意义。**建议把该验收改为「script ≤ 230 行且单一职责」**，P3 起按此执行。
 
-### P3 基础设施收敛（详案，待确认）
+### P3 基础设施收敛（已完成）
 
 **目标**：持久化只有一个出口；领域层不再调用浏览器对话框；合集引用不再依赖数组下标。**不改存储键名、不改存档结构。**
 
@@ -531,6 +530,28 @@ flowchart LR
 | 移动合集交互变形 | `prompt` 换位置 | 只挪调用点，仍用 `prompt`，不改文案 |
 | 合集索引改动引入错位 | P3-e 改提交结构 | 单独 PR + 专项用例；先加断言再改代码 |
 
+#### 实际结果与偏差
+
+| 步骤 | 落地文件 | 验收 |
+| --- | --- | --- |
+| P3-a | `keys.ts`（26 行）/ `localStore.ts`（77 行） | `grep -rn "localStorage" src` 只命中 `infrastructure/` 与 `tests/`；键名字面量只在 `keys.ts` |
+| P3-b | `teamsRepository.ts`（53 行） | `storageCompat.spec.js` 7 条：旧存档逐字一致、`expanded` 重置与剥离、键名不变、损坏回退 |
+| P3-c | `preferencesRepository.ts`（55 行） | 三个 composable 内已无存储代码；偏好行为不变 |
+| P3-d | `useTeamManagement` / `useModalState` / `useTeamStorage` / `SavedTeamsPanel` / `App.vue` | `grep -rn "alert(\|prompt(" src` 只命中 `.vue`（`AddOpPanel` 按详案保留）；新增 7 条返回值用例 |
+| P3-e | `useTeamStorage` / `useModalState` / `SaveTeamModal` / `SavedTeamsPanel` / `App.vue` | `collectionRefs.spec.js` 4 条 + `savedTeamsPanel.spec.js` 5 条，先红后绿 |
+| P3-f | **跳过** | P3 期间没有新增存档字段，此时加 `schemaVersion` 属于空转 |
+
+偏差与顺带修掉的缺陷：
+
+1. **P3-a 的边界比详案大**。详案只写「新建 keys + localStore」，但验收要求 `src` 内不再出现 `localStorage`，因此 a 步必须把 4 个 composable 的调用点一并改掉；b / c 只是把「键 + 读写 + 编码」按用途分组，不再二次改动调用方。
+2. **`SaveTeamModal` 选第一个合集等于「不归类」**。原代码 `collectionIndex: selectedCollection.value || null`，索引 `0` 是 falsy。换成合集名后 `"" || null` 语义才正确，已由 `collectionRefs.spec.js` 锁住。
+3. **合集内「移动」实际是复制**。`moveToCollection` 只从「未分类」删，从不离开源合集；而 `SavedTeamsPanel` 又把合集内的 `teamIndex` 当未分类索引传出去，会连带搬走未分类列表里同序号的编队。现在载荷是 `{ teamItem, fromCollectionName, savedIndex, targetCollectionName }`，先离开源位置再入目标合集。
+4. **`toggleCollection` 直接改 props**（原 FIXME）。改为 `emit("toggleCollection", collectionName)` 由 `App.vue` 维护，`SavedTeamsPanel` 现在对 props 只读。
+5. **`moveToCollectionOp` 收一个 payload 对象**，不再用 4 个位置参数：移动的来源要同时表达「合集名」与「未分类索引」，位置参数到第 4 个已经没人读得懂。
+6. **存储键名、存档字段结构零改动**。`expanded` 仍在落库时剥离、读回时补 `true`；旧存档逐字读回由 `storageCompat.spec.js` 断言。
+
+测试从 186 增至 **209**（22 个文件），`vue-tsc` / `vitest` / `eslint`（0 error）全部通过。
+
 ### P4 目录迁移（概要）
 
 按第 5 / 6 节执行 `git mv` + 全量改 import + 加 `@/features/*` 别名 + `tests` 分置 + 更新 `gen-codebook.mjs` 与文档。**只做移动与路径，不带逻辑改动。**
@@ -551,7 +572,7 @@ flowchart LR
 | P0 | `eslint` 0 error；测试 ≥95 且全绿；`coverage` 可生成；分享码快照固定。**已达成：0 error / 186 绿** |
 | P1 | `domain/` 0 个 `ref`/`import vue`；纯函数测试 ≥20（实际 80）；组件 script 下降；全量测试绿。**已达成** |
 | P2 | `.op-unit` 样式只存在一处（75px）；**现有测试不改断言全部通过（186 绿）**；`app.smoke` + `equipmentUi` 通过；`vue-tsc` / `vite build` / `eslint --max-warnings` 前的 0 error 全过；移动端 390×844 无横向溢出、折叠与筛选正常。**已达成**；原「单文件 ≤300 行」未达成，原因见 P2 偏差第 6 条 |
-| P3 | `grep -r localStorage src` 只命中 `infrastructure/storage`；`grep -rn "alert(\|prompt(" src` 只命中 `.vue`；新增「旧存档读取」用例；手动回归保存 / 编辑 / 移动 / 删除 / 导入 |
+| P3 | `grep -r localStorage src` 只命中 `infrastructure/storage`；`grep -rn "alert(\|prompt(" src` 只命中 `.vue`；新增「旧存档读取」用例；手动回归保存 / 编辑 / 移动 / 删除 / 导入。**已达成：209 绿**（手动回归三项由 `collectionRefs` / `savedTeamsPanel` / `useModalState` 用例代偿，真机走查仍待做一次） |
 | P4 | `npm run build`（含 `vue-tsc`）通过；`grep -r "@/data/operators.json" src/features` 为空；`preview` 手动走查全过 |
 | P5 | 无 dead export（`knip` 或人工清单）；README / architecture 与实际结构一致；测试 ≥200 |
 

@@ -49,7 +49,7 @@ sequenceDiagram
   VS->>GV: setVersion("guicheng")
   GV->>GV: isValidVersionId? 与当前相同?
   alt 有效且不同
-    GV->>GV: 更新 currentVersionId + 写 localStorage
+    GV->>GV: 更新 currentVersionId<br/>preferencesRepository.setVersionId
     GV-->>VS: true
     VS->>A: emit("change", id)
     A->>A: showTempMessage("已切换到…")
@@ -162,15 +162,16 @@ sequenceDiagram
   TP->>A: emit save-team
   A->>MS: openSaveTeamModal(team)
   alt 编队为空
-    MS->>U: alert("当前编队为空，无法保存")
+    MS-->>A: false
+    A->>U: showTempMessage("当前编队为空，无法保存")
   else
-    MS-->>SM: showTeamModal = true
-    U->>SM: 输入队名 / 选合集
+    MS-->>A: true（showTeamModal = true）
+    U->>SM: 输入队名 / 选合集（下拉值是合集名）
     SM->>A: emit save（teamData）
-    A->>TS: saveTeam(teamData, team, showTempMessage, versionId)
+    A->>TS: saveTeam(teamData, showTempMessage, versionId)
     TS->>TS: 组装 { name, team, createTime, version }
-    TS->>TS: addOrUpdateTeam（有合集则入合集，否则入未归类）
-    TS->>TS: 写 localStorage（只写受影响的那个键）
+    TS->>TS: addOrUpdateTeam（按合集名入合集，null 入未归类）
+    TS->>TS: teamsRepository.saveTeams / saveCollections
     TS-->>A: showTempMessage("编队保存成功")
     A->>MS: closeTeamModal()
   end
@@ -214,7 +215,7 @@ sequenceDiagram
 
   U->>S: 点击编队「分享」
   S->>A: emit shareTeam(teamItem)
-  A->>SC: shareTeam(teamItem, …, versionId)
+  A->>SC: generateTeamCode(teamItem, resolveTeamVersionId(...))
   SC->>CD: encodeTeam(team, "guicheng")
   CD->>CD: 写名称 + 干员引用（码表下标 / ESCAPE_REF）
   CD->>CD: 有装备 → magic 0xd0，逐件写引用
@@ -222,7 +223,8 @@ sequenceDiagram
   CD->>CD: 头部 magic|type + flags + 版本字节
   CD->>CD: 整体 Base62，前缀 "A"
   CD-->>SC: 分享码
-  SC->>M: shareCode = code，showShareModal = true
+  SC-->>A: code
+  A->>M: openShareModal → shareCode / showShareModal = true
   M-->>U: 自动全选，可一键复制
 ```
 

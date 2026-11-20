@@ -33,6 +33,22 @@
 - 新增 `components/filter-controls.css`：`PoolFilters` 与 `CovenantFilterRow` 共用 `.chip` / `.chip-list` / `.icon-filter-row` / `.row-label`，用 `<style scoped src>` 引入，避免同一套外观写两份
 - `.op-unit` 由两处定义（干员池 75px / 编队 78px）收敛为 **`OperatorCard` 一处、统一 75px**；8 人一行 670px，比原 694px 更宽裕
 
+#### P3 基础设施收敛
+
+持久化与浏览器对话框都从业务代码里抽离，**存档键名与字段结构零改动**：
+
+- 新增 `src/infrastructure/storage/`：`keys.ts`（6 个键名常量，值冻结）、`localStore.ts`（`readJSON` / `writeJSON` / `readText` / `writeText`，统一异常兜底）
+- 新增 `teamsRepository.ts` / `preferencesRepository.ts`：编队与合集、四类偏好的存取；`expanded` 只在内存里存在，落库剥离、读回置 `true`
+- `useGameVersion` / `usePoolFilters` / `useSelfOperators` / `useTeamStorage` 内不再出现 `localStorage`，`src` 中只有 `infrastructure/` 与测试会提到它
+- `useTeamManagement().addToTeam`、`useModalState().openSaveTeamModal` 改为返回 `boolean`，满员 / 空编队的提示交给 `App.vue`；「移动到合集」的 `prompt` 移到 `SavedTeamsPanel`
+- 合集引用由数组下标改为**合集名 + `teamIndex`**，`SaveTeamModal` 的下拉值直接是合集名
+- 合集展开态改由 `App.vue` 维护，`SavedTeamsPanel` 不再修改 props
+
+修复：
+
+- 保存编队时选第一个合集会落到「不归类」（`index || null` 把 `0` 当成空值）
+- 合集内「移动到合集」实际是复制：源合集没有移除条目，还会把未分类列表里同序号的编队一起搬走
+
 ### 移除
 
 - 全量导出（`generateFullCode` / `encodeFull` / `ARKFULL` 前缀 / v3 `type=3` 解码分支）：从未上线 UI，也无历史码
@@ -45,7 +61,10 @@
 - 新增 `shareCompat.spec.js`（14 条）：锁定 4 条 v3 分享码快照、覆盖 v1/v2 历史码解析、`ARKCOL` 合集分支、未知干员跳过、非法输入
 - 修复 `mobilePool.spec.js` 的假绿：`matchMedia` 桩原先把查询串写死为 `768px` 且忽略入参，与实现的 `1024px` 不符却永远通过；现在只在查询串匹配时返回结果，并直接断言组件查询的断点
 - 干员总数 / 装备数 / 变形同构体数等规模断言改为从数据推导，赛季更新不再假红
-- 总数 87 → 186
+- 新增 `storageCompat.spec.js`（7 条）：旧存档逐字读回、`expanded` 重置与剥离、键名不变、损坏与非法结构回退
+- 新增 `collectionRefs.spec.js`（4 条）与 `savedTeamsPanel.spec.js`（5 条）：合集按名字定位、移动不误伤未分类列表，先红后绿
+- 新增 `useTeamManagement.spec.js`（4 条）、`useModalState.spec.js`（3 条）：记录「用返回值而不是对话框表达拒绝」的契约
+- P0–P1 累计 87 → 186，P3 后 186 → 209
 
 ### 工程
 

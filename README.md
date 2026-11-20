@@ -133,6 +133,7 @@ npm run dev
 │     ├─ components           # 页面组件与弹窗
 │     ├─ composables          # 响应式胶水：版本、编队、存储、分享、提示、PWA
 │     ├─ domain               # 纯业务规则（无 Vue、无 DOM，可直接单测）
+│     ├─ infrastructure       # 存储键、读写封装与仓储（存档格式的唯一出口）
 │     ├─ data                 # 版本注册表与各版本数据集
 │     ├─ utils                # 分享码编解码、图片地址
 │     ├─ tests                # Vitest 单测
