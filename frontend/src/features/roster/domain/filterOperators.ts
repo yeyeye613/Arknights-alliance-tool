@@ -5,14 +5,14 @@
  * 既无法分粒度单测，Ban 策略（faction / covenant）也埋在模板组件里。
  * 这里抽成纯函数，输入是「筛选项 + Ban 状态 + 版本数据」，输出是干员列表。
  */
-import type { BanStrategy, OperatorBase } from "@/domain/types";
-import type { GameVersionLike } from "@/domain/versionAdapter";
+import type { OperatorBase } from "@/entities/operator";
 import {
   findOperatorEverywhere,
   getOperatorCovenants,
   getOperatorTier,
   getOperatorTraits,
-} from "@/domain/versionAdapter";
+} from "@/entities/operator";
+import type { BanStrategy, GameVersionLike } from "@/entities/version";
 
 /** 六个维度的筛选条件，空串表示不限 */
 export interface PoolFilter {

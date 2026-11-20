@@ -5,8 +5,10 @@
  * 这里把它固定成一条断言。
  */
 import { describe, it, expect } from "vitest";
-import { getGameVersion } from "@/data/versions.js";
-import { DEFAULT_VERSION_ID } from "@/domain/versionAdapter";
+import {
+  DEFAULT_VERSION_ID,
+  getGameVersion,
+} from "@/data/versions.js";
 import {
   canAddToTeam,
   countMissingOperators,

@@ -13,18 +13,19 @@ import pako from "pako";
 
 import { decodeCompact, isCompactCode } from "@/features/sharing/domain/shareCodec.js";
 import { getAvatarUrl } from "@/shared/lib/assets.js";
+import { DEFAULT_VERSION_ID } from "@/data/versions.js";
+import type { OperatorInstance } from "@/entities/operator";
 import {
-  DEFAULT_VERSION_ID,
   findOperatorEverywhere,
-  getGameVersion,
   isSelfOperatorRegistered,
-} from "@/domain/versionAdapter";
-import type { OperatorInstance, SavedTeam, TeamCollection } from "@/domain/types";
+} from "@/entities/operator";
+import type { SavedTeam, TeamCollection } from "@/entities/team";
+import { getGameVersion } from "@/entities/version";
 
 /** 历史前缀：v1/v2 时代的分享码，仍需能解析 */
 const LEGACY_PREFIXES = ["ARKTEAM", "ARKCOL"] as const;
 
-/** 干员在当前版本的自选干员配置中的缺省版本已下沉到 versionAdapter；这里只做协议映射 */
+/** 干员在当前版本的自选干员配置中的缺省版本来自 data 注册表；这里只做协议映射 */
 const nowText = (): string => new Date().toLocaleString();
 
 /** 分享码里的干员条目（v3 紧凑格式） */

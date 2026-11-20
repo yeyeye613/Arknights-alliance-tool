@@ -10,14 +10,13 @@
  * 3. 「调和」激活时，场上每个已出现的核心盟约人数 +1（只加一层，不递归传递）
  * 4. 进阶等级由效果文案里的「在场N名不同…」反推（历史契约，见 README/审计）
  */
-import {
-  CORE_GROUP,
-  getCovenantsByGroup,
-  getEffectiveOperatorCovenants,
-} from "@/domain/versionAdapter";
-import type { GameVersionLike } from "@/domain/versionAdapter";
+import { CORE_GROUP } from "@/data/versions.js";
+import type { Covenant } from "@/entities/covenant";
+import { getCovenantsByGroup } from "@/entities/covenant";
+import type { TeamEntry } from "@/entities/operator";
+import { getEffectiveOperatorCovenants } from "@/entities/operator";
+import type { GameVersionLike } from "@/entities/version";
 import { getMorphCovenant, getOperatorEquipmentNames } from "@/features/equipment/domain/equipRules";
-import type { Covenant, TeamEntry } from "@/domain/types";
 
 /** 调和类盟约会为核心盟约额外 +1 人数 */
 export const HARMONY_COVENANT = "调和";

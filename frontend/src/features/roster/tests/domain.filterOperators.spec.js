@@ -13,11 +13,8 @@ import {
   isBannedByCovenants,
   resolveTier,
 } from "@/features/roster/domain/filterOperators";
-import {
-  ADDITIONAL_GROUP,
-  CORE_GROUP,
-  getCovenantsByGroup,
-} from "@/domain/versionAdapter";
+import { ADDITIONAL_GROUP, CORE_GROUP } from "@/data/versions.js";
+import { getCovenantsByGroup } from "@/entities/covenant";
 
 const guicheng = getGameVersion("guicheng");
 const mengyue = getGameVersion("mengyue");

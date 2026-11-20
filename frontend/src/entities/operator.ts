@@ -1,62 +1,54 @@
 /**
- * data/ 与 domain/ 之间的唯一适配层
+ * 干员实体：类型与版本相对的解析
  *
- * 现状：`data/versions.js` 同时承担「版本注册表」和「干员解析规则」两种职责
- * （审计 3.6 / F4）。在把它拆开之前，domain 里所有对它的调用都收敛到本文件：
- * 一是给 JS 实现补上签名，二是将来拆分时只需要改这一处。
- *
- * P4 之后本文件会退化为 entities/operator.ts 的薄封装。
+ * 这些访问器都要读数据集，因此依赖方向是 `entities → data`；
+ * `data/versions.js` 不反向 import 本文件。
  */
-import type {
-  BanStrategy,
-  Covenant,
-  Equipment,
-  OperatorBase,
-  TeamEntry,
-  Trait,
-} from "@/domain/types";
+import type { GameVersionLike } from "./version";
 import {
-  ADDITIONAL_GROUP,
-  CORE_GROUP,
-  DEFAULT_VERSION_ID,
   findOperatorEverywhere as rawFindOperatorEverywhere,
-  getCovenantsByGroup as rawGetCovenantsByGroup,
   getEffectiveOperatorCovenants as rawGetEffectiveOperatorCovenants,
-  getGameVersion as rawGetGameVersion,
   getOperatorCovenants as rawGetOperatorCovenants,
   getOperatorTier as rawGetOperatorTier,
   getOperatorTraits as rawGetOperatorTraits,
   isSelfOperatorRegistered as rawIsSelfOperatorRegistered,
 } from "@/data/versions.js";
 
-export { ADDITIONAL_GROUP, CORE_GROUP, DEFAULT_VERSION_ID };
+/** 干员特质 */
+export interface Trait {
+  type?: string;
+  trigger?: string;
+  description?: string;
+  upgraded?: string;
+}
+
+/** 干员静态数据（operators*.json 的条目） */
+export interface OperatorBase {
+  tier?: string;
+  covenants?: string[];
+  traits?: Trait[];
+}
 
 /**
- * 领域函数接受的版本对象
+ * 编队中的干员实例
  *
- * 不直接用 GameVersion：调用方可能传注册表条目、ref 里的对象、
- * 或测试里手工构造的最小桩，只要字段够用即可。
+ * 注意：这不是静态数据，而是界面拼装出来的运行时对象。
+ * 几处拼装的字段并不完全一致（见审计 D3）。
  */
-export interface GameVersionLike {
-  covenants?: Record<string, Covenant>;
-  operators?: Record<string, OperatorBase>;
-  equipments?: Record<string, Equipment>;
-  banStrategy?: BanStrategy;
-  selfOperatorStrategy?: "direct" | "faction";
+export interface OperatorInstance {
+  id?: number | string;
+  name: string;
+  avatar?: string;
+  tier?: string;
+  isSelfOperator?: boolean;
+  equipments?: string[];
 }
 
-/** 按 id 取版本，未知 id 回退到默认版本（历史上是盟约版） */
-export function getGameVersion(id?: string | null): GameVersionLike {
-  return rawGetGameVersion(id as string) as GameVersionLike;
-}
+/** 编队元素：允许直接给干员名（历史数据结构里 team 可能存字符串） */
+export type TeamEntry = OperatorInstance | string | null | undefined;
 
-/** 取某版本指定分组（core / additional）的盟约名称 */
-export function getCovenantsByGroup(
-  version: GameVersionLike,
-  group: string,
-): string[] {
-  return (rawGetCovenantsByGroup(version, group) ?? []) as string[];
-}
+/** JS 侧 getEffectiveOperatorCovenants 接受的形状 */
+type JsTeamEntry = string | { name?: string; equipments?: string[] };
 
 /** 解析干员的基础盟约（自选干员按版本策略推断） */
 export function getOperatorCovenants(
@@ -65,9 +57,6 @@ export function getOperatorCovenants(
 ): string[] {
   return (rawGetOperatorCovenants(name, version) ?? []) as string[];
 }
-
-/** JS 侧 getEffectiveOperatorCovenants 接受的形状 */
-type JsTeamEntry = string | { name?: string; equipments?: string[] };
 
 /** 解析干员的有效盟约（含变形同构体的装备加成） */
 export function getEffectiveOperatorCovenants(
@@ -82,7 +71,7 @@ export function getEffectiveOperatorCovenants(
   );
 }
 
-/** 解析干员等阶（自选干员回退到 selfOp 登记值） */
+/** 解析干员等阶（自选干员回退到 selfOperators 登记值） */
 export function getOperatorTier(
   name: string,
   version: GameVersionLike,

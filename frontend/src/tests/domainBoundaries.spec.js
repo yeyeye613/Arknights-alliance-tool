@@ -5,8 +5,9 @@
  * 浏览器副作用、界面依赖偷偷塞回领域层（审计建议的可检查约束 1/4/5/6）。
  * 它读的是源码文本，因此不需要额外依赖。
  *
- * P4 目录迁移后领域层分散在 `src/domain`（跨 feature 的类型与数据适配）与
- * `src/features/<feature>/domain`，因此按目录名递归收集，而不是写死一个路径。
+ * P4 起领域层按 feature 就近放在 `src/features/<feature>/domain`，
+ * 因此按目录名递归收集，而不是写死一个路径。
+ * `src/entities` 不在扫描范围：它是实体类型与数据访问器，允许 import data。
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
@@ -61,7 +62,6 @@ describe("domain 层约束", () => {
         "filterOperators.ts",
         "shareImport.ts",
         "teamRules.ts",
-        "versionAdapter.ts",
       ]),
     );
   });

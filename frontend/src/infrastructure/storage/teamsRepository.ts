@@ -7,7 +7,7 @@
  *
  * 存档结构本身不改：`SavedTeam[]` 与 `PersistedCollection[]` 的字段与旧版一致。
  */
-import type { SavedTeam, TeamCollection } from "@/domain/types";
+import type { SavedTeam, TeamCollection } from "@/entities/team";
 import { STORAGE_KEYS } from "@/infrastructure/storage/keys";
 import { readJSON, writeJSON } from "@/infrastructure/storage/localStore";
 

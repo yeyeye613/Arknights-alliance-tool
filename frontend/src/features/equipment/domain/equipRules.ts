@@ -6,7 +6,9 @@
  *
  * 约束：本文件不得 import vue、不得读写浏览器持久化存储 / DOM。
  */
-import type { Equipment, GameVersion, OperatorInstance } from "@/domain/types";
+import type { Equipment } from "@/entities/equipment";
+import type { OperatorInstance } from "@/entities/operator";
+import type { GameVersion } from "@/entities/version";
 
 /** 每个干员的装备槽数量 */
 export const EQUIPMENT_SLOT_COUNT = 2;

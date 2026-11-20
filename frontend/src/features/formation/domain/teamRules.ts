@@ -5,9 +5,9 @@
  * 跨版本干员提示）、App.vue / SavedTeamsPanel（版本回退）里，
  * 同一条规则有多份实现。这里收口成纯函数，组件只负责呈现。
  */
-import { DEFAULT_VERSION_ID } from "@/domain/versionAdapter";
-import type { GameVersionLike } from "@/domain/versionAdapter";
-import type { OperatorInstance } from "@/domain/types";
+import { DEFAULT_VERSION_ID } from "@/data/versions.js";
+import type { OperatorInstance } from "@/entities/operator";
+import type { GameVersionLike } from "@/entities/version";
 
 /**
  * 编队是否还能再加一名干员
