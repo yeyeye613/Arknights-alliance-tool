@@ -12,17 +12,12 @@ import {
   getGameVersion,
   isValidVersionId,
 } from "@/data/versions.js";
-
-const VERSION_STORAGE_KEY = "arknights_game_version";
+import { getVersionId, setVersionId } from "@/infrastructure/storage/preferencesRepository";
 
 function readStoredVersion() {
-  try {
-    const stored = localStorage.getItem(VERSION_STORAGE_KEY);
-    if (stored && isValidVersionId(stored)) {
-      return stored;
-    }
-  } catch (error) {
-    console.error("读取游戏版本缓存失败", error);
+  const stored = getVersionId();
+  if (stored && isValidVersionId(stored)) {
+    return stored;
   }
   return DEFAULT_VERSION_ID;
 }
@@ -55,11 +50,7 @@ export function useGameVersion() {
       return false;
     }
     currentVersionId.value = id;
-    try {
-      localStorage.setItem(VERSION_STORAGE_KEY, id);
-    } catch (error) {
-      console.error("保存游戏版本失败", error);
-    }
+    setVersionId(id);
     return true;
   };
 

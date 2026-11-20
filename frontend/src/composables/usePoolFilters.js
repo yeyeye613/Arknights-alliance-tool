@@ -1,6 +1,12 @@
 import { computed, onMounted, ref, watch } from "vue";
 
 import { collectTraitOptions } from "@/domain/filterOperators";
+import {
+  getFilterCollapsed,
+  getFilterView,
+  setFilterCollapsed,
+  setFilterView,
+} from "@/infrastructure/storage/preferencesRepository";
 
 /**
  * 干员池筛选状态
@@ -8,10 +14,8 @@ import { collectTraitOptions } from "@/domain/filterOperators";
  * 这里只做「状态 + 派生值」：筛选条件、三态 Ban、已选摘要、偏好读写。
  * 真正的匹配规则在 `domain/filterOperators.ts`（纯函数，可单独测试）。
  *
- * 偏好键暂时留在这里，P3 会迁到 infrastructure/storage 的 preferencesRepository。
+ * 偏好的键与读写细节在 `infrastructure/storage`，本文件只调仓储。
  */
-export const FILTER_VIEW_KEY = "arknights_pool_filter_view";
-export const FILTER_COLLAPSED_KEY = "arknights_pool_filter_collapsed";
 
 /**
  * @param {Object} context
@@ -34,7 +38,7 @@ export function usePoolFilters({
   const traitTrigger = ref("");
   const banned = ref([]);
 
-  /** 筛选区折叠 / 视图形态（持久化到 localStorage） */
+  /** 筛选区折叠 / 视图形态（持久化到本地存储） */
   const collapsed = ref(false);
   const viewMode = ref("icon");
 
@@ -175,19 +179,16 @@ export function usePoolFilters({
   });
 
   onMounted(() => {
-    const savedView = localStorage.getItem(FILTER_VIEW_KEY);
-    if (savedView === "icon" || savedView === "text") {
-      viewMode.value = savedView;
-    }
-    collapsed.value = localStorage.getItem(FILTER_COLLAPSED_KEY) === "1";
+    viewMode.value = getFilterView();
+    collapsed.value = getFilterCollapsed();
   });
 
   watch(viewMode, (value) => {
-    localStorage.setItem(FILTER_VIEW_KEY, value);
+    setFilterView(value);
   });
 
   watch(collapsed, (value) => {
-    localStorage.setItem(FILTER_COLLAPSED_KEY, value ? "1" : "0");
+    setFilterCollapsed(value);
   });
 
   return {

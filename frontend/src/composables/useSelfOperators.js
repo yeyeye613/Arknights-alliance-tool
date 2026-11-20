@@ -1,6 +1,10 @@
 import { onMounted, ref, watch } from "vue";
 
 import selfOpConfig from "@/data/selfOp.json";
+import {
+  getSelfOperators,
+  setSelfOperators,
+} from "@/infrastructure/storage/preferencesRepository";
 import { getAvatarUrl } from "@/utils/index.js";
 
 /**
@@ -12,7 +16,6 @@ import { getAvatarUrl } from "@/utils/index.js";
  * 校验规则只有一条：名字在 selfOp.json 里、且阶数为 Ⅴ/Ⅵ。
  * 读取时按此重算，避免历史缓存里出现已下架或改阶的干员。
  */
-export const SELF_OP_STORAGE_KEY = "arknights_selected_self_operators";
 
 /** 允许自选的阶数 */
 const ALLOWED_TIERS = ["Ⅴ", "Ⅵ"];
@@ -41,21 +44,13 @@ export function useSelfOperators() {
   const selfOperators = ref([]);
 
   onMounted(() => {
-    try {
-      const saved = localStorage.getItem(SELF_OP_STORAGE_KEY);
-      if (saved) {
-        selfOperators.value = normalizeSelfOperators(JSON.parse(saved));
-      }
-    } catch (error) {
-      console.error("加载自选干员缓存失败", error);
-      selfOperators.value = [];
-    }
+    selfOperators.value = normalizeSelfOperators(getSelfOperators());
   });
 
   watch(
     selfOperators,
     (value) => {
-      localStorage.setItem(SELF_OP_STORAGE_KEY, JSON.stringify(value));
+      setSelfOperators(value);
     },
     { deep: true },
   );
