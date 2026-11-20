@@ -25,7 +25,8 @@ flowchart TB
     direction LR
     A["App.vue<br/>三块面板 + 弹窗"]
     MAIN["main.ts<br/>挂载 + SW"]
-    MS["useModalState<br/>弹窗 / 提示"]
+    TD["useTeamDialog<br/>保存 / 编辑弹窗"]
+    TOAST["useToast<br/>顶部提示"]
   end
 
   subgraph FEAT["features/*（按功能切分）"]
@@ -47,10 +48,11 @@ flowchart TB
     PWAUI["PwaUpdatePrompt"]
   end
 
-  subgraph DOM["domain（跨 feature）"]
+  subgraph ENT["entities"]
     direction LR
-    VA["versionAdapter<br/>data 适配"]
-    TYPES["types.ts"]
+    EOP["operator<br/>类型 + 解析"]
+    ECOV["covenant"]
+    ETEAM["team / equipment / version"]
   end
 
   subgraph INFRA["infrastructure"]
@@ -71,10 +73,10 @@ flowchart TB
 
   APP --> FEAT
   FEAT --> SHARED
-  FEAT --> DOM
+  FEAT --> ENT
   FEAT --> INFRA
   FEAT --> DATA
-  DOM --> DATA
+  ENT --> DATA
   DATA --> JSON
   DATA --> EQD
   RT --> LSTORE
@@ -91,12 +93,13 @@ flowchart TB
 1. **视图层不碰数据文件**。组件通过 `useGameVersion()` 拿到当前版本的 `covenants` / `operators`，或调用 `data/versions.js` 的解析函数；不 `import` 任何 `*.json`。已知例外只有 `features/roster/components/SelfOperatorDialog.vue` 直接读 `selfOperators.json`（自选池候选列表），待收敛到访问器。
 2. **视图层与 composable 都不碰 `localStorage`**。持久化统一走 `src/infrastructure/storage`：composable 调仓储（`teamsRepository` / `preferencesRepository`），仓储调 `localStore`，键名只出现在 `keys.ts`。P3 之后 `src` 内除 `infrastructure/` 只剩 `tests/` 还会出现这个词。
 3. **领域层不碰 DOM**。`useTraitTooltip` / `useCovenantTooltip` 持有的是浮层的坐标与内容状态，真正挂载由组件 `teleport` 到 `body` 完成。
-4. **每个 feature 的 `domain/` 是纯函数区**。统计、筛选、Ban、上限、装备规则、分享码映射都在这里，不 `import vue`、不读写 `localStorage`、不调 `alert`。P4 之后领域文件分散在 `src/domain/` 与 `src/features/*/domain/`，`src/tests/domainBoundaries.spec.js` 递归扫描目录名 `domain` 后读源码校验。
-5. **`shared` 与 `infrastructure` 不依赖 `features`**。`shared` 放无业务含义的通用件（弹窗骨架、浮层控制器、图片地址），`infrastructure` 放与浏览器打交道的东西（存储、Service Worker）。
-6. **唯一组合根是 `app/App.vue`**。所有 composable 在此实例化，结果通过 props 下发、通过 emits 上抛；需要写别的模块的状态时用回调注入（如 `importFromCode(data, { addTeam })`），不传 ref 进去 push。
-7. **基础设施层不判断数据合法性**。它只回答「怎么存取」——版本 id 是否注册、自选干员阶数是否有效，仍是 composable 的判断。
-8. **composable 不弹对话框**。满员、空编队这类拒绝用返回值表达（`addToTeam` / `openSaveTeamModal` 返回 `boolean`），提示文案与 `prompt` 询问留在视图层，这样 composable 可以在没有 DOM 的环境里直接测。
-9. **features 之间目前是深引**。`formation → roster → covenants → equipment`、所有 feature → `game-version`，方向单一且无环，但尚未收口到 `features/x/index.ts`。这是 P4 的已知未完成项，记在 [refactoring-plan.md](../docs/architecture/refactoring-plan.md) 的 P5。
+4. **每个 feature 的 `domain/` 是纯函数区**。统计、筛选、Ban、上限、装备规则、分享码映射都在这里，不 `import vue`、不读写 `localStorage`、不调 `alert`。P5 之后 `src/domain/` 已不存在，领域文件全部在 `src/features/*/domain/`；`src/tests/domainBoundaries.spec.js` 递归扫描目录名 `domain` 后读源码校验。
+5. **`entities/` 是实体类型与数据访问器，不是第二套领域层**。它允许 `import data`（访问器本来就要读数据集），但不放规则、不碰 Vue、不碰存储。`data` 不反向 import `entities`。
+6. **`shared` 与 `infrastructure` 不依赖 `features`**。`shared` 放无业务含义的通用件（弹窗骨架、浮层控制器、图片地址），`infrastructure` 放与浏览器打交道的东西（存储、Service Worker）。
+7. **唯一组合根是 `app/App.vue`**。所有 composable 在此实例化，结果通过 props 下发、通过 emits 上抛；需要写别的模块的状态时用回调注入（如 `importFromCode(data, { addTeam })`），不传 ref 进去 push。
+8. **基础设施层不判断数据合法性**。它只回答「怎么存取」——版本 id 是否注册、自选干员阶数是否有效，仍是 composable 的判断。
+9. **composable 不弹对话框**。满员、空编队这类拒绝用返回值表达（`addToTeam` / `openSaveTeamModal` 返回 `boolean`），提示文案与 `prompt` 询问留在视图层，这样 composable 可以在没有 DOM 的环境里直接测。
+10. **features 之间通过 `index.ts` 收口**。跨 feature 与 `app/` 只能从 `@/features/<name>` 导入，由 `src/tests/featureBoundaries.spec.js` 扫源码强制；`domain/` 之间是唯一例外（纯规则直连 `features/<x>/domain/...`，避免把组件带进纯函数层的依赖图）。依赖方向是一条无环链：`game-version → equipment → covenants → roster → formation → library`。
 
 ## 关键设计决策
 
@@ -152,13 +155,15 @@ flowchart LR
 
 ## 质量保障
 
-**209 条用例 / 22 个文件**（`npm run test:run`），覆盖重心在「最容易静默出错」的地方：
+**218 条用例 / 25 个文件**（`npm run test:run`）+ `npm run knip` 零输出，覆盖重心在「最容易静默出错」的地方：
 
 | 测试 | 位置 | 关注点 |
 | --- | --- | --- |
 | `shareCompat` / `useShareCode` | `src/tests` / `features/sharing` | v3 快照、旧码兼容、编解码往返 |
 | `storageCompat` | `src/tests` | 旧存档逐字读回、键名不变、损坏回退 |
 | `domainBoundaries` | `src/tests` | 领域层不碰 Vue / 存储 / 对话框 / 视图层 |
+| `featureBoundaries` | `src/tests` | 跨 feature 只从 `index.ts` 导入 |
+| `useToast` / `useShareDialogs` | `app/tests` / `features/sharing` | 提示计时器不互相打断、空分享码不弹空窗 |
 | `app.smoke` | `src/tests` | 整体渲染与版本切换冒烟 |
 | `domain.*` | 各 feature | 统计、筛选、上限、装备、分享码映射的纯函数 |
 | `poolFilter` / `mobilePool` | `features/roster` | 筛选与 Ban 策略、移动端断点 |
@@ -182,8 +187,8 @@ flowchart LR
 
 | 想做的事 | 落点 |
 | --- | --- |
-| 新增赛季 | `data/` 加数据集（`operators.<id>.json` / `covenants.<id>.json`）→ `versions.js` 注册 → `shareCodec.js` 追加 `VERSION_CODES` |
+| 新增赛季 | `data/` 加数据集（`operators.<id>.json` / `covenants.<id>.json`）→ `versions.js` 注册 → `shareCodec.ts` 追加 `VERSION_CODES` |
 | 新增装备 | `data/equipment.<id>.json` → `npm run codebook` → 补 `features/equipment/tests/equipment.spec.js` |
 | 新增筛选维度 | `features/roster`：`usePoolFilters` 的状态 + `PoolFilters` 的控件 + `domain/filterOperators` 的匹配 |
-| 新增分享内容 | `features/sharing/domain/shareCodec.js` 开新 magic + 新 type，旧解码器判无效 |
+| 新增分享内容 | `features/sharing/domain/shareCodec.ts` 开新 magic + 新 type，旧解码器判无效 |
 | 新增统计规则 | `features/covenants/domain/covenantStats.ts`（纯函数 + 单测），再由 `useCovenantStats` 包成 computed |

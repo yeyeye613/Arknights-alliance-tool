@@ -154,13 +154,13 @@ sequenceDiagram
   participant U as 用户
   participant TP as TeamPanel
   participant A as app/App.vue
-  participant MS as useModalState
+  participant MS as useTeamDialog
   participant SM as SaveTeamDialog
   participant TS as useSavedTeams
 
   U->>TP: 点击「保存编队」
   TP->>A: emit save-team
-  A->>MS: openSaveTeamDialog(team)
+  A->>MS: openSaveTeamModal(team)
   alt 编队为空
     MS-->>A: false
     A->>U: showTempMessage("当前编队为空，无法保存")

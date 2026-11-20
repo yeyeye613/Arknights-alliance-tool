@@ -62,6 +62,32 @@
 - `src/tests/domainBoundaries.spec.js` 改为递归扫描所有名为 `domain` 的目录，不再写死单一路径
 - 覆盖率配置的排除项补 `src/**/tests/**`，避免用例被算进源码分母
 
+#### P5 清理与类型化
+
+结构性的收尾：清死代码、收口跨 feature 依赖、把类型从「跨层垃圾桶」搬进实体层，
+并给两个最容易静默出错的文件加上类型约束。**行为零改动，存档与分享码协议不变**。
+
+- 新增 `src/entities/`：`version` / `covenant` / `operator` / `equipment` / `team`，
+  放实体类型与数据访问器；依赖方向只有 `entities → data`。`src/domain/` 随之消失
+- 每个 feature 新增 `index.ts` 作为唯一对外入口，跨 feature 与 `app/` 不再深引；
+  `domain/` 之间保留直连（纯规则不该经过 re-export 组件的桶）
+- 新增 `src/tests/featureBoundaries.spec.js`：扫源码强制「只从桶导入」，
+  并对深引、桶导入、domain 直连、同 feature 深引四种情形分别断言
+- `useModalState`（96 行 / 21 项）拆成 `app/useTeamDialog` + `features/sharing/useShareDialogs` + `app/useToast`
+- `shareCodec.js` → `shareCodec.ts`：只加类型，varint / Base62 / magic / 72 字节阈值一个表达式未动；
+  4 条 v3 快照与 v1/v2 历史码全部原样通过
+- `data/versions.js` 开 `@ts-check`：加 `VersionEntry` / `VersionLike` 两个 JSDoc 类型，
+  注册表字段写错（如 `operator` 少个 s）现在在 `vue-tsc` 阶段报错，而不是运行时静默 undefined
+- 删除 `covenant.operators`：两个 JSON 共 49 处，运行时 0 读取
+- 引入 `knip`（`npm run knip`）并清理到 0 输出：删 `findEquipment` / `getOperatorVersionIds`
+  两个死函数，收窄 7 个只在模块内使用的导出
+- 依赖清理：移除未使用的 `gh-pages`（部署走 GitHub Action），补声明 `@eslint/js`
+
+修复：
+
+- 顶部提示连续触发时，前一条的计时器会把后一条提前清掉；现在先 `clearTimeout` 再起新的，
+  并在 effect scope 销毁时释放
+
 ### 移除
 
 - 全量导出（`generateFullCode` / `encodeFull` / `ARKFULL` 前缀 / v3 `type=3` 解码分支）：从未上线 UI，也无历史码
@@ -76,8 +102,9 @@
 - 干员总数 / 装备数 / 变形同构体数等规模断言改为从数据推导，赛季更新不再假红
 - 新增 `storageCompat.spec.js`（7 条）：旧存档逐字读回、`expanded` 重置与剥离、键名不变、损坏与非法结构回退
 - 新增 `collectionRefs.spec.js`（4 条）与 `savedTeamsPanel.spec.js`（5 条）：合集按名字定位、移动不误伤未分类列表，先红后绿
-- 新增 `useTeamManagement.spec.js`（4 条）、`useModalState.spec.js`（3 条）：记录「用返回值而不是对话框表达拒绝」的契约
-- P0–P1 累计 87 → 186，P3 后 186 → 209（P4 只搬目录，用例数与断言不变）
+- 新增 `useTeamManagement.spec.js`（4 条）、`useTeamDialog.spec.js`（3 条，原 useModalState）：记录「用返回值而不是对话框表达拒绝」的契约
+- 新增 `featureBoundaries.spec.js`（3 条）、`useToast.spec.js`（3 条）、`useShareDialogs.spec.js`（3 条）
+- P0–P1 累计 87 → 186，P3 后 186 → 209（P4 只搬目录，用例数与断言不变），P5 后 209 → 218
 
 ### 工程
 

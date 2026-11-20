@@ -130,7 +130,7 @@ npm run dev
 │  ├─ public/resource/image   # 干员头像、盟约与装备图标
 │  ├─ scripts/gen-codebook.mjs# 码表生成（只追加）
 │  └─ src
-│     ├─ app                  # 组合根 App.vue、入口 main.ts、全局样式、模态状态
+│     ├─ app                  # 组合根 App.vue、入口 main.ts、全局样式、弹窗与提示状态
 │     ├─ features             # 按功能切分，组件 / composable / 领域规则 / 测试都在同一个 feature 下
 │     │  ├─ game-version      #   版本切换与版本上下文
 │     │  ├─ roster            #   干员池、筛选、干员卡、自选干员、特质浮层
@@ -139,7 +139,7 @@ npm run dev
 │     │  ├─ equipment         #   装备池、临时装备池、选择器、装备规则
 │     │  ├─ library           #   已保存编队与合集
 │     │  └─ sharing           #   分享码编解码与导入导出
-│     ├─ domain               # 跨 feature 的类型与 data 适配层
+│     ├─ entities             # 实体类型与数据访问器（干员 / 盟约 / 装备 / 编队 / 版本）
 │     ├─ shared               # BaseModal、浮层控制器、图片地址
 │     ├─ infrastructure       # 存储键、读写封装、仓储与 PWA
 │     ├─ data                 # 版本注册表与各版本数据集

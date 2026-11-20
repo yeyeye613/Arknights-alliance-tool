@@ -62,8 +62,7 @@ erDiagram
         "condition": "在场6名不同的【炎】干员",
         "description": "战斗开始时，【炎】干员每次攻击时造成攻击力6%的随机元素损伤……"
       }
-    ],
-    "operators": ["拜松", "矩", "风絮", "乌有", "余", "仇白", "黍", "老鲤", "烛煌", "夕"]
+    ]
   }
 }
 ```
@@ -74,7 +73,7 @@ erDiagram
 | `group` | `"core" \| "additional"` | 核心盟约（阵营）/ 附加盟约。阵营与盟约两组筛选项都由它推导，不硬编码列表 |
 | `activateCount` | `number` | 激活所需人数 |
 | `effects` | `Effect[]` | 效果列表，可含多条 |
-| `operators` | `string[]` | 关联干员，用于数据校对；运行时统计以干员的 `covenants` 为准 |
+| ~~`operators`~~ | — | **P5 已删除**。它曾是 PRTS 页面的成员列表，与干员的 `covenants` 是同一事实的两份拷贝，已漂移 49 处且运行时 0 读取 |
 
 `Effect` 字段：
 
@@ -306,6 +305,6 @@ erDiagram
 | --- | --- |
 | 干员新增 `traits` 类别 | 无需改代码，筛选选项自动推导；建议补测试断言存在该类别 |
 | 盟约新增 `effects.type` | 检查 `CovenantTooltip.vue` 的 `typeClass` 映射，未命中会落到默认样式 |
-| 干员新增字段并要进分享码 | `shareCodec.js` 的 `writeOperator` / `readOperator` + 开新 magic（不能复用 `0xc0`） |
+| 干员新增字段并要进分享码 | `shareCodec.ts` 的 `writeOperator` / `readOperator` + 开新 magic（不能复用 `0xc0`） |
 | 编队新增字段并要落库 | `useSavedTeams.js` 的 `saveTeam` / `updateTeam` + 兼容旧存档的读取兜底 |
 | 新增持久化键 | 本节表格 + `CONTRIBUTING.md` 的分层约定（只允许 composable 写） |

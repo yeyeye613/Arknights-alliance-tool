@@ -2,7 +2,7 @@
 
 > 本文档基于对 46 个源文件的逐一阅读、脚本抽取的真实 import 图、以及针对数据一致性的脚本化核对，**不是**根据文件名或 README 推断。
 >
-> 状态：P0–P4 已完成；P5 为概要（清理、类型化与跨 feature API 收口）。
+> 状态：P0–P5 已完成；P5 的偏差与遗留项见第 10 节。
 > 最后更新：2026-11-20
 
 ## 目录
@@ -122,13 +122,13 @@ flowchart TB
 
 ## 4. 问题清单与证据
 
-### 4.1 已完成（P0 / P1 / P2 / P3 / P4）
+### 4.1 已完成（P0 / P1 / P2 / P3 / P4 / P5）
 
 | # | 问题 | 处理方式 |
 | --- | --- | --- |
 | S1 | `PoolPanel` 承担 6 类职责（搜索筛选 / 三态 Ban / 自选干员 / 移动端折叠 / 视图切换 / 拖拽源） | 规则下沉到 `domain/filterOperators.ts`（P1）；模板拆成 `PoolFilters` / `CovenantFilterRow` / `OperatorCard`，自选干员拆到 `useSelfOperators`（P2，1355 → 418 行） |
 | S2 | `TeamPanel` 同时管编队编辑、跨版本校验、装备三条入口、盟约展示 | 规则下沉到 `domain/teamRules.ts` + `domain/equipRules.ts`（P1）；模板拆成 `TeamHeader` / `OperatorSlot` / `ActiveEffectsList`（P2，816 → 367 行） |
-| S3 | `App.vue` 解构了 13 个从未使用的绑定 | 已删 4 个（`createTeamFromData` / `createCollectionFromData` / `shareTeam` / `shareCollection`）；其余 9 个留 P5 |
+| S3 | `App.vue` 解构了 13 个从未使用的绑定 | P5 删完剩余 9 个；同时删掉 `useModalState` 里对应的 5 个死 ref |
 | S6 | `hasEquipmentPool` 双实现 | `TeamPanel` 改用 `domain/equipRules.hasEquipmentPool` |
 | S7 | `useTeamStorage.saveTeam(teamData, team, …)` 的 `team` 参数从未使用 | 已删除该参数，`saveTeam` / `updateTeam` 统一从 `teamData.team` 取值 |
 | S8 | `generateFullCode` 是死代码 | 全量导出整条链路已删除（含 `encodeFull` / `type=3` 解码） |
@@ -149,16 +149,19 @@ flowchart TB
 | S14 | 顶层按文件类型平铺（`components/` `composables/` `domain/` `utils/`），改一个功能要跨 4 个目录找文件 | P4 按功能重组为 `app/` + `features/*` + `shared/` + `infrastructure/`，测试跟着功能走；只移动与改 import，逻辑零改动 |
 | D6 | `data/equipment.js` 既读数据又 re-export 规则 | P4 删掉 re-export，调用方直连 `features/equipment/domain/equipRules` |
 | D7 | 数据集命名不对称（`covenants.json` vs `covenants.guicheng.json`、`selfOp.json`） | P4 改为 `covenants.mengyue.json` / `operators.mengyue.json` / `selfOperators.json`，同步 `versions.js` 与 `gen-codebook.mjs` |
+| D1 | 盟约 ↔ 干员双向引用已漂移 | P5 删掉 `covenant.operators`，从根上消掉第二份拷贝；干员归属只保留 `operator.covenants` |
+| D2 | `covenant.operators` 无运行时读取 | P5 删除两个 JSON 共 49 处，`gen-codebook` 输出「无新增」 |
+| S15 | `useModalState` 一个 96 行 / 21 项的大对象同时服务三个弹窗 | P5 拆成 `app/useTeamDialog` + `features/sharing/useShareDialogs` + `app/useToast` |
+| S16 | features 之间 26 条深引，内部结构成了事实 API | P5 每个 feature 加 `index.ts`，跨 feature 与 `app/` 只走桶；`featureBoundaries.spec.js` 强制 |
+| S17 | 导出面无检查，死函数与死导出靠人工发现 | P5 引入 `knip`，清到 0 输出；`npm run knip` 可回归 |
 
 ### 4.2 待处理
 
 | # | 问题 | 证据 | 处理阶段 |
 | --- | --- | --- | --- |
-| D1 | 盟约 ↔ 干员双向引用已漂移（盟约版 15 处多出 / 11 处漏收） | 脚本比对 `covenant.operators` 与 `operator.covenants` | P5 |
-| D2 | `covenant.operators` 全仓无运行时读取，是脏数据 | `grep "\.operators"` 只命中 `version.operators` | P5 |
-| D3 | 干员实例 4 处各自拼装，字段不一致 | `PoolPanel.baseOperators` / `useSelfOperators` / `SelfOperatorDialog` / `shareImport.restoreOperators` | P5 |
-| S11 | 业务逻辑全是 JS，`vue-tsc` 只覆盖 TS 文件 | 23 个 SFC 无 `lang="ts"`；P4 迁移脚本按扩展名保留 `.js`，未顺手改名 | P5（渐进 `@ts-check`） |
-| S13 | 业务文案散在领域层与视图层 | 「装备槽已满」在 `TeamPanel`；「最多 2 名」在 `SelfOperatorDialog` | P5（P3 只处理了 alert/prompt，文案统一未做） |
+| D3 | 干员实例 4 处各自拼装，字段不一致 | `PoolPanel.baseOperators` / `useSelfOperators` / `SelfOperatorDialog` / `shareImport.restoreOperators` | 未做（P5 未纳入，需先定统一构造器的形状） |
+| S11 | 业务逻辑以 JS 为主，`vue-tsc` 只覆盖 TS 文件 | P5 已把 `shareCodec` 转 TS、`versions.js` 开 `@ts-check`；其余 13 个 composable 与 24 个 SFC 仍是 JS | 渐进（按需，不一次性重写） |
+| S13 | 业务文案散在领域层与视图层 | 「装备槽已满」在 `TeamPanel`；「最多 2 名」在 `SelfOperatorDialog` | 未做（P5 只处理了 alert/prompt） |
 
 ---
 
@@ -600,7 +603,7 @@ flowchart LR
 
 后续若要再调整目录，同样的手法可用：改映射表 → 干跑 → 落盘 → 四次校验。
 
-### P5 清理与类型化（详案，待确认）
+### P5 清理与类型化（已完成）
 
 P5 与前四个阶段性质不同：P1–P4 都是「搬东西 + 改调用」，P5 要动的是**结构本身**（`App.vue` 的绑定、模块的返回值、类型的归属）。因此每一步都按「一处改动 + 一条可执行验收」拆开，任何一步失败都能单独回滚。
 
@@ -811,6 +814,30 @@ src/entities/
 2. **P5-e 的处理方式**：直接删 `covenant.operators` 49 处（删前导出临时清单备查）。
 3. **死导出检查**：装 `knip` 为 devDependency，跑一次出清单，后续可作 CI 检查。
 
+#### 实际结果与偏差
+
+| 步骤 | 落地 | 验收 |
+| --- | --- | --- |
+| P5-a | 删 `App.vue` 9 个死绑定 + `useModalState` 5 个死 ref；`EquipmentPool` 的 `defineProps` 不再赋值；`ShareDialog` 改 `catch` | `eslint --max-warnings 0` 通过，11 warning → 0 |
+| P5-b | 7 个 `index.ts`；26 条深引改走桶；新增 `featureBoundaries.spec.js`（3 条） | `vue-tsc` / 218 绿 / `vite build` 通过 |
+| P5-c | `useModalState` 拆成 `useTeamDialog` + `useShareDialogs` + `useToast`；新增 6 条用例 | 209 → 212（P5-b 护栏 3 条）→ 218（P5-c 新增 6 条，原 useModalState 3 条改名保留） |
+| P5-d | `entities/` 5 个文件；`types.ts` / `versionAdapter.ts` 删除，`src/domain/` 消失 | 13 个引用点改指，`grep "@/domain/"` 为 0 |
+| P5-e | 两个 JSON 共删 49 处（盟约版 23 + 规程版 26），清单备份到系统临时目录 | 字段计数 0、JSON 合法、`gen-codebook` 无新增 |
+| P5-f | `shareCodec.ts`（372 行）+ `versions.js` 开 `@ts-check` | 分享码 14 条用例一字未改全绿；`vue-tsc` 0 error |
+| P5-g | `knip` 引入并清到 0 输出；死导出处理；依赖清理 | `npm run knip` 无输出 |
+
+偏差与需要记下来的判断：
+
+1. **护栏不扫 `tests/`**。测试是白盒的，跨 feature 直接 mount 对方组件是合理的；把测试也算进「只能从桶导入」会逼着桶导出大量只为测试存在的符号。`featureBoundaries` 只扫源码与 `app/`。
+2. **`domain/` 之间保留直连**。`covenants/domain` 直接 import `equipment/domain/equipRules`，不经过 `features/equipment`。桶里 re-export 了 Vue 组件，纯规则一旦走桶，领域层的依赖图里就会凭空出现组件。护栏对这条例外单独断言。
+3. **默认导入改具名导入会漏**。批量替换说明符时只改了路径，`OperatorSlot` 仍写 `import OperatorCard from "@/features/roster"`；`vue-tsc` 不报（模块存在），`vite build` 才以 `MISSING_EXPORT` 失败。**桶导入必须配一次生产构建**。
+4. **`getGameVersion` 留了一个带签名的版本在 `entities/version.ts`**。详案说「注册表留 data」，但领域代码需要 `GameVersionLike` 而不是 `Object`；注册表与 `GAME_VERSIONS` 仍在 `data/versions.js`，entities 只是补签名。
+5. **`@ts-check` 的 18 个错误是同一根因**。注册表被推断成字面量键，字符串索引全部 TS7053。修法是给 data 层加自己的 `VersionEntry` / `VersionLike` JSDoc 类型（不从 entities 反向 import 类型，避免概念上的双向依赖），并把 `name` 归一成 `key`。行为等价，但确实动了表达式——这是 P5 里唯一一次「类型驱动的小改写」。
+6. **`knip` 的首次报告需要人判断**。8 个未用导出里，`getEquipments` / `HARMONY_COVENANT` / `normalizeSelfOperators` / `CODE_PREFIX` / `parseLegacyCode` / `TOUCH_HIDE_DELAY` 都是内部在用、只是多写了 `export`；只有 `findEquipment` / `getOperatorVersionIds` 是真死函数。**knip 说「未使用」不等于「该删」，要看是内部使用还是彻底没人用**。
+7. **P5 没有做 D3（干员实例统一构造器）与 S13（业务文案统一）**。前者要先定实例形状（`id` / `avatar` / `isSelfOperator` 哪些是必需），属设计决策；后者收益低于风险。两项都留在 4.2 待处理。
+
+提交：`refactor(app)`（死绑定）→ `refactor(features)`（桶 + 护栏）→ `refactor(app)`（拆弹窗状态）→ `refactor(entities)`（实体层）→ `chore(data)`（删冗余字段）→ `refactor(types)`（两个试点）→ `refactor(cleanup)` + `chore(deps)`（knip 与死导出）→ `docs`。
+
 ---
 
 ## 11. 每阶段验收标准
@@ -822,7 +849,7 @@ src/entities/
 | P2 | `.op-unit` 样式只存在一处（75px）；**现有测试不改断言全部通过（186 绿）**；`app.smoke` + `equipmentUi` 通过；`vue-tsc` / `vite build` / `eslint --max-warnings` 前的 0 error 全过；移动端 390×844 无横向溢出、折叠与筛选正常。**已达成**；原「单文件 ≤300 行」未达成，原因见 P2 偏差第 6 条 |
 | P3 | `grep -r localStorage src` 只命中 `infrastructure/storage`；`grep -rn "alert(\|prompt(" src` 只命中 `.vue`；新增「旧存档读取」用例；手动回归保存 / 编辑 / 移动 / 删除 / 导入。**已达成：209 绿**（手动回归三项由 `collectionRefs` / `savedTeamsPanel` / `useModalState` 用例代偿，真机走查仍待做一次） |
 | P4 | `npm run build`（含 `vue-tsc`）通过；`grep -r "@/data/operators.json" src/features` 为空；`preview` 手动走查全过。**已达成：209 绿 / 0 error / 构建通过**；手动走查待做一次 |
-| P5 | 无 dead export（`knip` 或人工清单）；README / architecture 与实际结构一致；测试 ≥200 |
+| P5 | 无 dead export（`knip` 或人工清单）；README / architecture 与实际结构一致；测试 ≥200。**已达成：knip 0 输出 / 218 绿 / 0 warning / 构建通过** |
 
 ---
 
