@@ -34,7 +34,7 @@
 
         <PoolPanel
           v-if="isPoolTab"
-          @add-to-team="addToTeam"
+          @add-to-team="handleAddToTeam"
         />
 
         <!-- 装备池：独立标签页，点击「装备池」切到这里 -->
@@ -56,6 +56,7 @@
           @edit-team="editTeamWrapper"
           @move-to-collection="moveToCollectionWrapper"
           @delete-team="deleteTeamWrapper"
+          @toggle-collection="toggleCollectionWrapper"
           @show-import-modal="showImportModal = true"
         />
       </div>
@@ -99,7 +100,7 @@
           ? {
               ...editingTeam,
               teamIndex: editingLocation?.teamIndex,
-              collectionIndex: editingLocation?.collectionIndex,
+              collectionName: editingLocation?.collectionName,
             }
           : null
       "
@@ -330,14 +331,23 @@
     showTempMessage(`已切换到「${getGameVersion(id).label}」`);
   };
 
+  /** 满员时的提示放在视图层，composable 只返回 false */
+  const handleAddToTeam = (op) => {
+    if (!addToTeam(op)) {
+      showTempMessage(`编队已满！当前上限为 ${teamLimit.value}`);
+    }
+  };
+
   // 包装openSaveTeamModal
   const openSaveTeamModalWrapper = () => {
-    openSaveTeamModal(team.value);
+    if (!openSaveTeamModal(team.value)) {
+      showTempMessage("当前编队为空，无法保存");
+    }
   };
 
   // 包装editTeam
-  const editTeamWrapper = (teamItem, collectionIndex, teamIndex) => {
-    editTeam(teamItem, collectionIndex, teamIndex);
+  const editTeamWrapper = (teamItem, collectionName, teamIndex) => {
+    editTeam(teamItem, collectionName, teamIndex);
   };
 
   // 包装saveTeam和updateTeam
@@ -357,12 +367,20 @@
   };
 
   // 新增包装函数
-  const deleteTeamWrapper = (collectionIndex, teamIndex) => {
-    deleteTeamOp(collectionIndex, teamIndex, showTempMessage);
+  const deleteTeamWrapper = (collectionName, teamIndex) => {
+    deleteTeamOp(collectionName, teamIndex, showTempMessage);
   };
 
-  const moveToCollectionWrapper = (teamItem, index) => {
-    moveToCollectionOp(teamItem, index, showTempMessage);
+  const moveToCollectionWrapper = (payload) => {
+    moveToCollectionOp(payload, showTempMessage);
+  };
+
+  /** 合集的展开态只活在内存里，不落库 */
+  const toggleCollectionWrapper = (collectionName) => {
+    const collection = teamCollections.value.find(
+      (item) => item.name === collectionName,
+    );
+    collection.expanded = !collection.expanded;
   };
 
   /** 打开分享弹窗（生成码失败时给出提示，不弹空窗） */

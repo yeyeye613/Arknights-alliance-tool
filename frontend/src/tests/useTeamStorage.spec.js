@@ -64,13 +64,8 @@ describe("useTeamStorage composable", () => {
   });
 
   it("should delete team from collection and remaining collections", () => {
-    const {
-      savedTeams,
-      teamCollections,
-      initSavedTeams,
-      addOrUpdateTeam,
-      deleteTeam,
-    } = useTeamStorage();
+    const { teamCollections, initSavedTeams, addOrUpdateTeam, deleteTeam } =
+      useTeamStorage();
     initSavedTeams();
 
     const newTeam = { name: "队B", team: [], createTime: "" };
@@ -81,7 +76,7 @@ describe("useTeamStorage composable", () => {
     });
 
     expect(teamCollections.value.length).toBe(1);
-    deleteTeam({ collectionIndex: 0, teamIndex: 0 });
+    deleteTeam({ collectionName: "合集B", teamIndex: 0 });
 
     expect(teamCollections.value.length).toBe(0);
   });

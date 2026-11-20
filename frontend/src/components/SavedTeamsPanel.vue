@@ -30,7 +30,7 @@
       >
         <div
           class="collection-header"
-          @click="toggleCollection(view.collectionIndex)"
+          @click="toggleCollection(view.collection.name)"
         >
           <span class="collection-name"
             >📁 {{ view.collection.name }} ({{ view.teams.length }})</span
@@ -64,9 +64,9 @@
             :edit-mode="editMode"
             @load="loadTeam(entry.team)"
             @share="shareTeam(entry.team)"
-            @edit="editTeam(entry.team, view.collectionIndex, entry.teamIndex)"
-            @move="moveToCollection(entry.team, entry.teamIndex)"
-            @remove="deleteTeam(view.collectionIndex, entry.teamIndex)"
+            @edit="editTeam(entry.team, view.collection.name, entry.teamIndex)"
+            @move="moveToCollection(entry.team, view.collection.name, null)"
+            @remove="deleteTeam(view.collection.name, entry.teamIndex)"
           />
         </div>
       </div>
@@ -102,7 +102,7 @@
             @load="loadTeam(entry.team)"
             @share="shareTeam(entry.team)"
             @edit="editTeam(entry.team, null, entry.index)"
-            @move="moveToCollection(entry.team, entry.index)"
+            @move="moveToCollection(entry.team, null, entry.index)"
             @remove="deleteTeam(null, entry.index)"
           />
         </div>
@@ -140,6 +140,7 @@
     "editTeam",
     "moveToCollection",
     "deleteTeam",
+    "toggleCollection",
     "showImportModal",
   ]);
 
@@ -183,28 +184,39 @@
     emit("shareCollection", collection);
   };
 
-  const editTeam = (teamItem, collectionIndex, teamIndex) => {
-    emit("editTeam", teamItem, collectionIndex, teamIndex);
+  /** 合集用名字标识（索引会随合集增删漂移），未分类传 null */
+  const editTeam = (teamItem, collectionName, teamIndex) => {
+    emit("editTeam", teamItem, collectionName, teamIndex);
   };
 
-  const moveToCollection = (teamItem, index) => {
-    emit("moveToCollection", teamItem, index);
+  /**
+   * 询问目标合集名后交给父级落库
+   *
+   * 询问属于视图层（composable 不再弹窗）；源位置用「合集名 + 未分类索引」
+   * 表达，合集内条目没有未分类索引，因此传 null。
+   */
+  const moveToCollection = (teamItem, fromCollectionName, savedIndex) => {
+    const targetCollectionName = prompt("请输入合集名称：", "");
+    if (!targetCollectionName) return;
+    emit("moveToCollection", {
+      teamItem,
+      fromCollectionName,
+      savedIndex,
+      targetCollectionName,
+    });
   };
 
-  const deleteTeam = (collectionIndex, teamIndex) => {
-    emit("deleteTeam", collectionIndex, teamIndex);
+  const deleteTeam = (collectionName, teamIndex) => {
+    emit("deleteTeam", collectionName, teamIndex);
   };
 
   const showImportModal = () => {
     emit("showImportModal");
   };
 
-  const toggleCollection = (index) => {
-    // FIXME(P3)：合集展开态应属于本组件的视图状态，目前直接修改父组件传入的
-    // 对象（P3 收敛持久化时改为 emit + 父级维护）。
-    // eslint-disable-next-line vue/no-mutating-props
-    props.teamCollections[index].expanded =
-      !props.teamCollections[index].expanded;
+  /** 展开 / 收起交给父级维护：props 里的合集对象不属于本组件 */
+  const toggleCollection = (collectionName) => {
+    emit("toggleCollection", collectionName);
   };
 
   const toggleUngrouped = () => {

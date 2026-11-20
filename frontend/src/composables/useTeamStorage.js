@@ -1,11 +1,15 @@
 import { ref } from "vue";
 
-const STORAGE_TEAMS_KEY = "arknights_saved_teams";
-const STORAGE_COLLECTIONS_KEY = "arknights_team_collections";
+import {
+  loadCollections,
+  loadTeams,
+  saveCollections as persistCollections,
+  saveTeams,
+} from "@/infrastructure/storage/teamsRepository";
 
 /**
  * 编队数据存储管理
- * 负责将编队和合集数据持久化到浏览器的 localStorage
+ * 负责将编队和合集数据持久化到浏览器本地存储
  * @returns {Object} 存储操作方法和响应式数据
  */
 export function useTeamStorage() {
@@ -16,57 +20,33 @@ export function useTeamStorage() {
   const teamCollections = ref([]);
 
   /**
-   * 从 localStorage 加载已保存的编队和合集数据
+   * 从本地存储加载已保存的编队和合集数据
    * 页面初始化时调用
    */
   const initSavedTeams = () => {
-    try {
-      const saved = localStorage.getItem(STORAGE_TEAMS_KEY);
-      if (saved) {
-        savedTeams.value = JSON.parse(saved);
-      } else {
-        savedTeams.value = [];
-      }
-    } catch (error) {
-      console.error("加载编队数据失败", error);
-      savedTeams.value = [];
-    }
-
-    try {
-      const collections = localStorage.getItem(STORAGE_COLLECTIONS_KEY);
-      if (collections) {
-        const parsed = JSON.parse(collections);
-        teamCollections.value = parsed.map((c) => ({ ...c, expanded: true }));
-      } else {
-        teamCollections.value = [];
-      }
-    } catch (error) {
-      console.error("加载合集数据失败", error);
-      teamCollections.value = [];
-    }
+    savedTeams.value = loadTeams();
+    teamCollections.value = loadCollections();
   };
 
   /**
-   * 仅保存合集数据到 localStorage
+   * 仅保存合集数据到本地存储
    * 内部会过滤掉 expanded 等 UI 状态字段
    */
   const saveCollections = () => {
-    const collectionsToSave = teamCollections.value.map(
-      ({ expanded, ...rest }) => rest,
-    );
-    localStorage.setItem(
-      STORAGE_COLLECTIONS_KEY,
-      JSON.stringify(collectionsToSave),
-    );
+    persistCollections(teamCollections.value);
   };
 
   /**
-   * 保存所有数据（编队 + 合集）到 localStorage
+   * 保存所有数据（编队 + 合集）到本地存储
    */
   const saveAllData = () => {
-    localStorage.setItem(STORAGE_TEAMS_KEY, JSON.stringify(savedTeams.value));
+    saveTeams(savedTeams.value);
     saveCollections();
   };
+
+  /** 按名字找合集；合集名是稳定引用，索引会随增删漂移 */
+  const findCollection = (name) =>
+    teamCollections.value.find((collection) => collection.name === name);
 
   /**
    * 新增或更新一个编队
@@ -74,22 +54,19 @@ export function useTeamStorage() {
    * @param {Object} options.newTeam - 要保存的编队对象
    * @param {string|null} options.collectionName - 目标合集名称，null 表示不归类
    * @param {Object|null} options.editingLocation - 编辑模式下的原位置信息
-   * @param {number|null} options.editingLocation.collectionIndex - 原合集索引
+   * @param {string|null} options.editingLocation.collectionName - 原合集名称，null 表示未分类
    * @param {number} options.editingLocation.teamIndex - 原编队索引
    */
   const addOrUpdateTeam = ({ newTeam, collectionName, editingLocation }) => {
     // 编辑模式：替换原有编队
     if (editingLocation) {
-      const { collectionIndex, teamIndex } = editingLocation;
-      if (collectionIndex !== null && collectionIndex >= 0) {
-        teamCollections.value[collectionIndex].teams[teamIndex] = newTeam;
+      const { collectionName: originName, teamIndex } = editingLocation;
+      if (originName) {
+        findCollection(originName).teams[teamIndex] = newTeam;
         saveCollections();
       } else {
         savedTeams.value[teamIndex] = newTeam;
-        localStorage.setItem(
-          STORAGE_TEAMS_KEY,
-          JSON.stringify(savedTeams.value),
-        );
+        saveTeams(savedTeams.value);
       }
       return;
     }
@@ -113,26 +90,30 @@ export function useTeamStorage() {
       }
     } else {
       savedTeams.value.push(newTeam);
-      localStorage.setItem(STORAGE_TEAMS_KEY, JSON.stringify(savedTeams.value));
+      saveTeams(savedTeams.value);
     }
   };
 
   /**
    * 删除指定位置的编队
    * @param {Object} location - 位置信息
-   * @param {number|null} location.collectionIndex - 合集索引，null 表示在未分类中
+   * @param {string|null} location.collectionName - 合集名称，null 表示在未分类中
    * @param {number} location.teamIndex - 编队在列表中的索引
    */
-  const deleteTeam = ({ collectionIndex, teamIndex }) => {
-    if (collectionIndex !== null && collectionIndex >= 0) {
-      teamCollections.value[collectionIndex].teams.splice(teamIndex, 1);
-      if (teamCollections.value[collectionIndex].teams.length === 0) {
-        teamCollections.value.splice(collectionIndex, 1);
+  const deleteTeam = ({ collectionName, teamIndex }) => {
+    if (collectionName) {
+      const collection = findCollection(collectionName);
+      collection.teams.splice(teamIndex, 1);
+      // 合集空了就整组移除，避免留下看不到的空目录
+      if (collection.teams.length === 0) {
+        teamCollections.value = teamCollections.value.filter(
+          (item) => item !== collection,
+        );
       }
       saveCollections();
     } else {
       savedTeams.value.splice(teamIndex, 1);
-      localStorage.setItem(STORAGE_TEAMS_KEY, JSON.stringify(savedTeams.value));
+      saveTeams(savedTeams.value);
     }
   };
 
@@ -140,13 +121,31 @@ export function useTeamStorage() {
    * 将编队移动到指定合集
    * @param {Object} options - 配置项
    * @param {Object} options.teamItem - 要移动的编队对象
-   * @param {number|null} options.savedIndex - 在未分类列表中的原索引，null 表示不在未分类中
+   * @param {string|null} options.fromCollectionName - 原合集名称，null 表示来自未分类
+   * @param {number|null} options.savedIndex - 在未分类列表中的原索引
    * @param {string} options.targetCollectionName - 目标合集名称
    */
-  const moveToCollection = ({ teamItem, savedIndex, targetCollectionName }) => {
-    let collection = teamCollections.value.find(
-      (c) => c.name === targetCollectionName,
-    );
+  const moveToCollection = ({
+    teamItem,
+    fromCollectionName = null,
+    savedIndex = null,
+    targetCollectionName,
+  }) => {
+    // 先离开原位置：合集内移动原本只 push 不删源，会留下两份
+    if (fromCollectionName) {
+      const source = findCollection(fromCollectionName);
+      source.teams = source.teams.filter((item) => item !== teamItem);
+      if (source.teams.length === 0) {
+        teamCollections.value = teamCollections.value.filter(
+          (item) => item !== source,
+        );
+      }
+    } else if (savedIndex !== null && savedIndex !== undefined) {
+      savedTeams.value.splice(savedIndex, 1);
+      saveTeams(savedTeams.value);
+    }
+
+    let collection = findCollection(targetCollectionName);
     if (!collection) {
       collection = {
         name: targetCollectionName,
@@ -158,10 +157,6 @@ export function useTeamStorage() {
     }
 
     collection.teams.push(teamItem);
-    if (savedIndex !== null && savedIndex !== undefined) {
-      savedTeams.value.splice(savedIndex, 1);
-      localStorage.setItem(STORAGE_TEAMS_KEY, JSON.stringify(savedTeams.value));
-    }
     saveCollections();
   };
 
@@ -182,10 +177,7 @@ export function useTeamStorage() {
 
     addOrUpdateTeam({
       newTeam,
-      collectionName:
-        teamData.collectionIndex !== null
-          ? teamCollections.value[teamData.collectionIndex]?.name
-          : null,
+      collectionName: teamData.collectionName || null,
       editingLocation: null,
     });
 
@@ -208,14 +200,11 @@ export function useTeamStorage() {
 
     addOrUpdateTeam({
       newTeam: updatedTeam,
-      collectionName:
-        teamData.collectionIndex !== null
-          ? teamCollections.value[teamData.collectionIndex]?.name
-          : null,
+      collectionName: teamData.collectionName || null,
       editingLocation:
         teamData.originalIndex !== undefined
           ? {
-              collectionIndex: teamData.originalCollectionIndex,
+              collectionName: teamData.originalCollectionName || null,
               teamIndex: teamData.originalIndex,
             }
           : null,
@@ -224,21 +213,19 @@ export function useTeamStorage() {
     showTempMessage("编队更新成功");
   };
 
-  const deleteTeamOp = (collectionIndex, teamIndex, showTempMessage) => {
-    deleteTeam({ collectionIndex, teamIndex });
+  const deleteTeamOp = (collectionName, teamIndex, showTempMessage) => {
+    deleteTeam({ collectionName, teamIndex });
     showTempMessage("编队已删除");
   };
 
-  const moveToCollectionOp = (teamItem, index, showTempMessage) => {
-    const collectionName = prompt("请输入合集名称：", "");
-    if (!collectionName) return;
-
-    moveToCollection({
-      teamItem,
-      savedIndex: index,
-      targetCollectionName: collectionName,
-    });
-    showTempMessage(`已移动到合集「${collectionName}」`);
+  /**
+   * 把编队移动到合集（目标合集名由视图层询问后放进 payload）
+   * @param {Object} payload - 见 moveToCollection
+   * @param {(message: string) => void} showTempMessage - 提示回调
+   */
+  const moveToCollectionOp = (payload, showTempMessage) => {
+    moveToCollection(payload);
+    showTempMessage(`已移动到合集「${payload.targetCollectionName}」`);
   };
 
   return {

@@ -19,16 +19,20 @@ export function useModalState() {
 
   const tempMessage = ref("");
 
+  /**
+   * 打开「保存编队」弹窗
+   * @returns {boolean} 是否打开；空编队返回 false，提示文案由调用方决定
+   */
   const openSaveTeamModal = (team) => {
     if (!team.length) {
-      alert("当前编队为空，无法保存");
-      return;
+      return false;
     }
     teamName.value = "";
     editingTeam.value = null;
     editingLocation.value = null;
     selectedCollection.value = "";
     showTeamModal.value = true;
+    return true;
   };
 
   const closeTeamModal = () => {
@@ -60,9 +64,9 @@ export function useModalState() {
     }, 2000);
   };
 
-  const editTeam = (teamItem, collectionIndex, teamIndex) => {
+  const editTeam = (teamItem, collectionName, teamIndex) => {
     editingTeam.value = teamItem;
-    editingLocation.value = { collectionIndex, teamIndex };
+    editingLocation.value = { collectionName, teamIndex };
     showTeamModal.value = true;
   };
 

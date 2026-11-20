@@ -11,13 +11,16 @@ export function useTeamManagement(teamLimit) {
   /** @type {import('vue').Ref<Array>} 当前编辑中的编队 */
   const team = ref([]);
 
+  /**
+   * 加入当前编队
+   * @returns {boolean} 是否加入成功；满员时返回 false，由调用方决定怎么提示
+   */
   const addToTeam = (op) => {
-    if (canAddToTeam(team.value.length, teamLimit.value)) {
-      team.value.push({ ...op });
-      return;
+    if (!canAddToTeam(team.value.length, teamLimit.value)) {
+      return false;
     }
-    // P3：领域层不应直接调用浏览器对话框，改由 notify 注入
-    alert(`编队已满！当前上限为 ${teamLimit.value}`);
+    team.value.push({ ...op });
+    return true;
   };
 
   const removeFromTeam = (index) => {

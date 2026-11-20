@@ -33,13 +33,13 @@
         </div>
         <div
           v-for="(collection, index) in teamCollections"
-          :key="index"
+          :key="collection.name"
           class="collection-option"
         >
           <input
             type="radio"
             :id="'collection-' + index"
-            :value="index"
+            :value="collection.name"
             v-model="selectedCollection"
           />
           <label :for="'collection-' + index">{{ collection.name }}</label>
@@ -104,7 +104,8 @@
       if (newVal) {
         if (props.isEdit && props.editTeamData) {
           teamName.value = props.editTeamData.name;
-          selectedCollection.value = props.editTeamData.collectionIndex || "";
+          // 编辑模式不提供换合集，这里只是回填展示用的原位置
+          selectedCollection.value = props.editTeamData.collectionName || "";
         } else {
           teamName.value = "";
           selectedCollection.value = "";
@@ -125,14 +126,14 @@
     const teamData = {
       name: teamName.value.trim(),
       team: [...props.currentTeam],
-      collectionIndex: selectedCollection.value || null,
+      collectionName: selectedCollection.value || null,
     };
 
     if (props.isEdit) {
       emit("update", {
         ...teamData,
         originalIndex: props.editTeamData.teamIndex,
-        originalCollectionIndex: props.editTeamData.collectionIndex,
+        originalCollectionName: props.editTeamData.collectionName || null,
       });
     } else {
       emit("save", teamData);
