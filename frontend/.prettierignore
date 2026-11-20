@@ -1,0 +1,9 @@
+dist/
+dev-dist/
+coverage/
+node_modules/
+public/
+package-lock.json
+
+# 游戏数据是人工录入产物，按 PRTS 原样保留，不做格式化
+src/data/*.json

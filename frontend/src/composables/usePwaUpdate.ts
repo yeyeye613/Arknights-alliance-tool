@@ -9,7 +9,7 @@ import { ref } from "vue";
  */
 export const updateAvailable = ref(false);
 
-type UpdateServiceWorker = (reloadPage?: boolean) => Promise<void>;
+type UpdateServiceWorker = (_reloadPage?: boolean) => Promise<void>;
 
 let updateServiceWorker: UpdateServiceWorker | null = null;
 let initialized = false;

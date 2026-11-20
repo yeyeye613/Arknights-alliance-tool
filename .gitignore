@@ -1,5 +1,6 @@
 .vscode/
 .idea/
+.workbuddy/
 *.swp
 *.bak
 .DS_Store
@@ -12,14 +13,8 @@ frontend/.env.local
 frontend/.env.*.local
 frontend/*.log
 frontend/.vite/
-
-backend/node_modules/
-backend/.vscode/
-backend/.idea/
-
-backend/target/
-backend/*.class
-
+frontend/coverage/
+frontend/dev-dist/
 
 *.sqlite
 *.db

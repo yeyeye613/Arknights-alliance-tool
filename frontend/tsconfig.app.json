@@ -4,6 +4,17 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "types": ["vite/client"],
 
+    /* 本项目是 JS 优先：domain/ 下的 TS 需要 import data/*.js 与 composables/*.js，
+       开启 allowJs 才能拿到这些模块的类型（不开启 checkJs，JS 文件本身不校验） */
+    "allowJs": true,
+
+    /* 与 vite.config.ts 的 resolve.alias 保持一致。
+       TS 5.0 起 paths 不再需要 baseUrl，路径相对本文件解析；
+       baseUrl 在 TS 7.0 会被移除，这里不写以免报弃用。 */
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
