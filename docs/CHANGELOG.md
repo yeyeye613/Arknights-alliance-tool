@@ -83,6 +83,26 @@
   两个死函数，收窄 7 个只在模块内使用的导出
 - 依赖清理：移除未使用的 `gh-pages`（部署走 GitHub Action），补声明 `@eslint/js`
 
+#### S13 错误契约与 D3 形状契约
+
+两项技术债（方案见 [debt-plan.md](architecture/debt-plan.md)）。**用户可见行为不变，分享码协议不变**：
+
+- 新增 `features/sharing/domain/shareErrors.ts`：13 个 `ShareErrorCode` + `ShareError`，
+  领域层原本 15 处 `throw new Error("<中文>")` 全部改为抛 code；文案迁到
+  `features/sharing/messages.ts`，由 `shareMessageOf(error, 兜底)` 取
+- 错误码与改前 13 条不同文案一一对应，不做合并——合并即改变边界输入下用户看到的话
+- `pako.inflate` 失败原本把英文报错透到界面，现统一转成 `DATA_CORRUPT`
+- `shareCompat.spec.js` 的文案断言改为校 code，4 条协议快照一个字符未变
+- `domainBoundaries.spec.js` 新增两条护栏：`domain/` 抛错带中文即失败；`domain/` 不得
+  import `shared/lib/assets`（那里依赖 `import.meta.env.BASE_URL`）
+- `OperatorInstance` 只保留 `name` / `tier?` / `isSelfOperator?` / `equipments`：
+  `avatar` 改为按名字现算，`id` 改由 `operatorKey` 派生（`self:` 前缀区分来源）
+- 五个构造点（版本池、自选池、自选弹窗、分享码导入、自选读档）统一走
+  `createOperatorInstance`，`equipments` 恒为数组
+- 列表 key 由 `op.id` 换成 `operatorKey(op)`，共 7 处（干员池 + 4 个预览列表）
+- 自选干员配额提成 `MAX_SELF_PER_TIER`，文案与计数标签改为插值；两处 `alert` 改走 toast
+- 存档不写迁移脚本：旧档多余的 `avatar` / `id` 对读取无害，下次保存时由构造器覆盖
+
 修复：
 
 - 顶部提示连续触发时，前一条的计时器会把后一条提前清掉；现在先 `clearTimeout` 再起新的，

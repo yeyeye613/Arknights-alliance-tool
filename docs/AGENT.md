@@ -31,6 +31,7 @@
 3. architecture/module-map.md：模块职责与依赖方向。
 4. architecture/data-model.md：核心数据结构和模块间数据契约。
 5. architecture/data-flow.md：启动、版本切换、盟约统计、分享码等流程。
+6. architecture/debt-plan.md：待处理技术债（D3 / S13 / S11）的处置方案与执行顺序。
 
 不要无差别读取全部文档。只阅读与当前任务相关的部分。
 

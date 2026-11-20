@@ -159,9 +159,11 @@ flowchart TB
 
 | # | 问题 | 证据 | 处理阶段 |
 | --- | --- | --- | --- |
-| D3 | 干员实例 4 处各自拼装，字段不一致 | `PoolPanel.baseOperators` / `useSelfOperators` / `SelfOperatorDialog` / `shareImport.restoreOperators` | 未做（P5 未纳入，需先定统一构造器的形状） |
-| S11 | 业务逻辑以 JS 为主，`vue-tsc` 只覆盖 TS 文件 | P5 已把 `shareCodec` 转 TS、`versions.js` 开 `@ts-check`；其余 13 个 composable 与 24 个 SFC 仍是 JS | 渐进（按需，不一次性重写） |
-| S13 | 业务文案散在领域层与视图层 | 「装备槽已满」在 `TeamPanel`；「最多 2 名」在 `SelfOperatorDialog` | 未做（P5 只处理了 alert/prompt） |
+| S13 | 业务文案散在领域层与视图层 | 领域层 15 处 `throw new Error("<中文>")`，视图层 2 处原样透传 | **已完成**（`c0b5824` + `d5ef936`），见 `debt-plan.md` §1 |
+| D3 | 干员实例 5 处各自拼装，字段不一致 | `PoolPanel`（两处）/ `useSelfOperators` / `SelfOperatorDialog` / `shareImport` | **已完成**（`794857e`），见 `debt-plan.md` §2 |
+| S11 | 业务逻辑以 JS 为主，`vue-tsc` 只覆盖 TS 文件 | 实测 15 个 JS 源加 `@ts-check` 报 80 条；14 个 composable 与 24 个 SFC 仍是 JS | 未开工，见 `debt-plan.md` §3 |
+
+三项的处置方案（含决策、步骤、验收、风险）见 **`docs/architecture/debt-plan.md`**。S13 与 D3 已按方案落地，S11 的阶段 0（补 `data/` 层类型）随时可起手。
 
 ---
 
@@ -834,7 +836,7 @@ src/entities/
 4. **`getGameVersion` 留了一个带签名的版本在 `entities/version.ts`**。详案说「注册表留 data」，但领域代码需要 `GameVersionLike` 而不是 `Object`；注册表与 `GAME_VERSIONS` 仍在 `data/versions.js`，entities 只是补签名。
 5. **`@ts-check` 的 18 个错误是同一根因**。注册表被推断成字面量键，字符串索引全部 TS7053。修法是给 data 层加自己的 `VersionEntry` / `VersionLike` JSDoc 类型（不从 entities 反向 import 类型，避免概念上的双向依赖），并把 `name` 归一成 `key`。行为等价，但确实动了表达式——这是 P5 里唯一一次「类型驱动的小改写」。
 6. **`knip` 的首次报告需要人判断**。8 个未用导出里，`getEquipments` / `HARMONY_COVENANT` / `normalizeSelfOperators` / `CODE_PREFIX` / `parseLegacyCode` / `TOUCH_HIDE_DELAY` 都是内部在用、只是多写了 `export`；只有 `findEquipment` / `getOperatorVersionIds` 是真死函数。**knip 说「未使用」不等于「该删」，要看是内部使用还是彻底没人用**。
-7. **P5 没有做 D3（干员实例统一构造器）与 S13（业务文案统一）**。前者要先定实例形状（`id` / `avatar` / `isSelfOperator` 哪些是必需），属设计决策；后者收益低于风险。两项都留在 4.2 待处理。
+7. **P5 没有做 D3（干员实例统一构造器）与 S13（业务文案统一）**。前者要先定实例形状（`id` / `avatar` / `isSelfOperator` 哪些是必需），属设计决策；后者收益低于风险。两项都留在 4.2 待处理，处置方案见 `debt-plan.md`。
 
 提交：`refactor(app)`（死绑定）→ `refactor(features)`（桶 + 护栏）→ `refactor(app)`（拆弹窗状态）→ `refactor(entities)`（实体层）→ `chore(data)`（删冗余字段）→ `refactor(types)`（两个试点）→ `refactor(cleanup)` + `chore(deps)`（knip 与死导出）→ `docs`。
 
