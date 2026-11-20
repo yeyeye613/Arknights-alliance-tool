@@ -4,7 +4,7 @@
  * 从 data/equipment.js 抽出的「判定规则」部分：槽位上限、变形同构体、
  * 组合装、装配校验。数据访问（读版本里的 equipments 对象）仍留在 data/。
  *
- * 约束：本文件不得 import vue、不得读写 localStorage / DOM。
+ * 约束：本文件不得 import vue、不得读写浏览器持久化存储 / DOM。
  */
 import type { Equipment, GameVersion, OperatorInstance } from "./types";
 
