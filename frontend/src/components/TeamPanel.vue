@@ -1,34 +1,13 @@
 <template>
   <section class="my-team">
-    <div class="panel-header">
-      <h3>当前编队 ({{ team.length }}/{{ teamLimit }})</h3>
-      <div class="header-actions">
-        <div class="limit-setter">
-          <label>上限:</label>
-          <input
-            type="number"
-            v-model.number="teamLimitModel"
-            min="1"
-            max="20"
-            @change="handleLimitChange"
-            class="limit-input"
-            @input="teamLimitModel = Math.max(1, Math.min(20, teamLimitModel))"
-          />
-        </div>
-        <button
-          @click="emit('save-team')"
-          class="new-team-btn"
-        >
-          保存编队
-        </button>
-        <button
-          @click="clearTeam"
-          class="clear-btn"
-        >
-          清空
-        </button>
-      </div>
-    </div>
+    <TeamHeader
+      :count="team.length"
+      :limit="teamLimit"
+      @update:limit="emit('update:teamLimit', $event)"
+      @limit-change="handleLimitChange"
+      @save="emit('save-team')"
+      @clear="clearTeam"
+    />
 
     <CovenantsPanel
       :presentCovList="presentCovList"
@@ -54,66 +33,23 @@
       :touch-start-threshold="10"
       :fallback-tolerance="8"
     >
-      <div
+      <OperatorSlot
         v-for="(op, index) in team"
         :key="index"
-        class="op-unit"
-        :class="{
-          'op-missing': isOpMissing(op),
-          'drop-ready': dropHint,
-          'drag-over': dragOverIndex === index,
-        }"
-        @mouseenter="hoverTraits($event, op)"
-        @mousemove="moveTraitTooltip"
-        @mouseleave="hideTraitTooltip"
-        @dragenter.prevent="handleDragOver($event, index)"
-        @dragover.prevent="handleDragOver($event, index)"
+        :op="op"
+        :missing="isOpMissing(op)"
+        :drop-ready="dropHint"
+        :drag-over="dragOverIndex === index"
+        @pick="handleOpClick(index)"
+        @remove="removeFromTeam(index)"
+        @remove-equipment="removeEquipment(index, $event)"
+        @hover="hoverTraits($event, op)"
+        @move="moveTraitTooltip"
+        @leave="hideTraitTooltip"
+        @dragover="handleDragOver($event, index)"
         @dragleave="handleDragLeave($event, index)"
-        @drop.prevent="handleDrop($event, index)"
-      >
-        <div
-          class="img-container"
-          @click="handleOpClick(index)"
-        >
-          <img
-            :src="op.avatar"
-            @error="handleImgError"
-          />
-          <span
-            v-if="op.isSelfOperator"
-            class="self-tag"
-          >
-            自选
-          </span>
-          <button
-            class="remove-btn"
-            @click.stop="removeFromTeam(index)"
-          >
-            ×
-          </button>
-
-          <!-- 装备角标：只显示已装备的槽位，点击卸下 -->
-          <div
-            v-if="equippedNames(op).length"
-            class="equip-badges"
-          >
-            <span
-              v-for="(equip, slot) in equippedNames(op)"
-              :key="slot"
-              class="equip-badge"
-              :title="`${equip}（点击卸下）`"
-              @click.stop="removeEquipment(index, slot)"
-            >
-              <img
-                :src="getEquipmentIconUrl(equip)"
-                :alt="equip"
-                @error="handleImgError"
-              />
-            </span>
-          </div>
-        </div>
-        <span class="name-label">{{ op.name }}</span>
-      </div>
+        @drop="handleDrop($event, index)"
+      />
     </VueDraggable>
 
     <!-- 临时装备池：贴在编队干员正下方，由父组件提供内容 -->
@@ -129,50 +65,18 @@
       @close="closeEquipmentPicker"
     />
 
-    <div
-      class="active-effects-wrap"
-      v-if="activeCovList.length > 0"
-    >
-      <div
-        class="collapse-header"
-        @click="isEffectsExpanded = !isEffectsExpanded"
-      >
-        <span>已激活效果详情 ({{ activeCovList.length }})</span>
-        <span
-          class="arrow"
-          :class="{ rotated: isEffectsExpanded }"
-          >▼</span
-        >
-      </div>
-      <div
-        class="collapse-content"
-        v-show="isEffectsExpanded"
-      >
-        <ul>
-          <li
-            v-for="cov in activeCovList"
-            :key="cov.name"
-          >
-            <span class="gold">【{{ cov.name }}】</span>
-            <p
-              class="activatedListDetails"
-              v-for="(effect, i) in cov.effects"
-              :key="i"
-            >
-              · {{ effect.condition }} {{ effect.description }}
-            </p>
-          </li>
-        </ul>
-      </div>
-    </div>
+    <ActiveEffectsList :active-cov-list="activeCovList" />
   </section>
 </template>
 
 <script setup>
-  import { ref, computed, toRef } from "vue";
+  import { computed, ref, toRef } from "vue";
   import { VueDraggable } from "vue-draggable-plus";
   import CovenantsPanel from "./CovenantsPanel.vue";
   import EquipmentPicker from "./EquipmentPicker.vue";
+  import TeamHeader from "./TeamHeader.vue";
+  import OperatorSlot from "./OperatorSlot.vue";
+  import ActiveEffectsList from "./ActiveEffectsList.vue";
   import { useCovenantStats } from "@/composables/useCovenantStats.js";
   import { useGameVersion } from "@/composables/useGameVersion.js";
   import {
@@ -183,18 +87,24 @@
     EQUIPMENT_SLOT_COUNT,
     equipToOperator,
     getOperatorEquipmentNames,
+    hasEquipmentPool,
     removeOperatorEquipment,
-  } from "@/data/equipment.js";
+  } from "@/domain/equipRules";
+  import {
+    countMissingOperators,
+    exceedsTeamLimit,
+    isOperatorMissing,
+    truncateToLimit,
+  } from "@/domain/teamRules";
   import {
     hasEquipmentDrag,
     readEquipmentDrag,
   } from "@/composables/useEquipmentDrag.js";
   import {
-    showTraitTooltip,
-    moveTraitTooltip,
     hideTraitTooltip,
+    moveTraitTooltip,
+    showTraitTooltip,
   } from "@/composables/useTraitTooltip.js";
-  import { getEquipmentIconUrl, handleImgError } from "@/utils/index.js";
 
   const props = defineProps({
     team: Array,
@@ -220,16 +130,11 @@
    * @param {Object} op - 编队中的干员
    * @returns {boolean} 是否为跨版本干员
    */
-  const isOpMissing = (op) => {
-    if (op?.isSelfOperator) {
-      return false;
-    }
-    return !currentVersion.value.operators[op?.name];
-  };
+  const isOpMissing = (op) => isOperatorMissing(op, currentVersion.value);
 
   /** 当前编队中不属于当前版本的干员数量 */
-  const missingCount = computed(
-    () => (props.team || []).filter((op) => isOpMissing(op)).length,
+  const missingCount = computed(() =>
+    countMissingOperators(props.team, currentVersion.value),
   );
 
   /** 悬停展示干员特质与所属盟约（跨版本干员附提示） */
@@ -244,8 +149,8 @@
   };
 
   /** 当前版本是否有装备数据 */
-  const hasEquipments = computed(
-    () => Object.keys(currentVersion.value.equipments || {}).length > 0,
+  const hasEquipments = computed(() =>
+    hasEquipmentPool(currentVersion.value),
   );
 
   const emit = defineEmits([
@@ -257,9 +162,6 @@
     "notify",
     "equipment-equipped",
   ]);
-
-  /** 已装备的装备名（最多两个，空槽不占位） */
-  const equippedNames = (op) => getOperatorEquipmentNames(op);
 
   /** 装备选择器：目标干员下标与当前槽位 */
   const equipTarget = ref(null);
@@ -375,21 +277,14 @@
     emit("notify", `已卸下「${name}」`);
   };
 
-  const isEffectsExpanded = ref(false);
-
-  const teamLimitModel = computed({
-    get: () => props.teamLimit,
-    set: (value) => emit("update:teamLimit", value),
-  });
-
   const teamModel = computed({
     get: () => props.team,
     set: (value) => emit("update:team", value),
   });
 
   const handleLimitChange = () => {
-    if (props.team.length > props.teamLimit) {
-      emit("update:team", props.team.slice(0, props.teamLimit));
+    if (exceedsTeamLimit(props.team, props.teamLimit)) {
+      emit("update:team", truncateToLimit(props.team, props.teamLimit));
     }
   };
 
@@ -410,77 +305,6 @@
     gap: 10px;
   }
 
-  .panel-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 2px 2px 0;
-  }
-
-  .panel-header h3 {
-    margin: 0;
-    font-size: 16px;
-    white-space: nowrap;
-  }
-
-  .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-left: auto;
-  }
-
-  .limit-setter {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: #333;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 12px;
-  }
-
-  .limit-input {
-    width: 35px;
-    background: transparent;
-    border: none;
-    color: #ffcf00;
-    font-weight: bold;
-    text-align: center;
-    outline: none;
-  }
-
-  .new-team-btn {
-    background: #ffcf00;
-    color: #121212;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: 0.3s;
-  }
-
-  .new-team-btn:hover {
-    background: #ffdd44;
-  }
-
-  .clear-btn {
-    background: transparent;
-    border: 1px solid #555;
-    color: #888;
-    padding: 4px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: 0.3s;
-  }
-
-  .clear-btn:hover {
-    background: #ff4d4f;
-    color: white;
-    border-color: #ff4d4f;
-  }
-
   .drag-area {
     display: flex;
     flex-wrap: wrap;
@@ -493,157 +317,13 @@
   }
 
   /* 编队一般 8~9 人：整体居中，横竖都对称，数量变化不破坏排版；
-     8 人 = 8×78 + 7×10 = 694px，1366×768 下编队列内宽 ~718px 刚好一行 */
+     8 人 = 8×75 + 7×10 = 670px，1366×768 下编队列内宽 ~718px 刚好一行 */
   .team-grid {
     border: 2px dashed #444;
     justify-content: center;
     align-content: center;
     min-height: 232px;
     max-height: none;
-  }
-
-  .op-unit {
-    position: relative;
-    width: 78px;
-    text-align: center;
-    cursor: pointer;
-  }
-
-  .op-unit img {
-    width: 100%;
-    aspect-ratio: 1;
-    border-radius: 4px;
-    background: #222;
-    display: block;
-  }
-
-  .img-container {
-    position: relative;
-  }
-
-  /* 跨版本干员：当前版本干员池中不存在 */
-  .op-unit.op-missing img {
-    outline: 2px dashed #ff6b6b;
-    outline-offset: -2px;
-    filter: grayscale(0.7) brightness(0.75);
-  }
-
-  .op-unit.op-missing .name-label {
-    color: #ff9a9a;
-  }
-
-  .remove-btn {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    background: #ff4d4f;
-    border: none;
-    color: #fff;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-    font-weight: bold;
-  }
-
-  .self-tag {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    background: rgba(255, 207, 0, 0.2);
-    color: rgba(255, 240, 180, 0.88);
-    font-size: 9px;
-    font-weight: 500;
-    line-height: 1;
-    padding: 2px 3px;
-    border: 1px solid rgba(255, 207, 0, 0.28);
-    border-radius: 3px;
-  }
-
-  .name-label {
-    font-size: 12px;
-    display: block;
-    margin-top: 5px;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-
-  .equip-badges {
-    position: absolute;
-    left: 3px;
-    bottom: 3px;
-    display: flex;
-    gap: 2px;
-    pointer-events: none;
-  }
-
-  .equip-badge {
-    position: relative;
-    width: 20px;
-    height: 20px;
-    padding: 1px;
-    box-sizing: border-box;
-    background: rgba(10, 10, 10, 0.85);
-    border: 1px solid #4c6b3f;
-    border-radius: 4px;
-    cursor: pointer;
-    pointer-events: auto;
-    transition:
-      border-color 0.15s,
-      transform 0.15s;
-  }
-
-  .equip-badge img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: block;
-    border-radius: 2px;
-    background: #111;
-  }
-
-  .equip-badge:hover {
-    border-color: #ff4d4f;
-    transform: translateY(-1px);
-  }
-
-  .equip-badge:hover::after {
-    content: "×";
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(20, 0, 0, 0.6);
-    color: #ff8a8a;
-    font-size: 13px;
-    font-weight: bold;
-    line-height: 1;
-    border-radius: 3px;
-  }
-
-  /* 临时装备池有货时，头像提示可放置 */
-  .op-unit.drop-ready .img-container img {
-    outline: 1px dashed rgba(143, 224, 205, 0.65);
-    outline-offset: -1px;
-  }
-
-  .op-unit.drag-over .img-container img {
-    outline: 2px solid #8fe0cd;
-    outline-offset: -2px;
-    box-shadow: 0 0 10px rgba(143, 224, 205, 0.45);
-  }
-
-  .op-unit.drag-over .name-label {
-    color: #8fe0cd;
-  }
-
-  .active-effects-wrap {
-    margin-top: auto;
-    border: 1px solid #444;
-    border-radius: 4px;
-    background: #1e1e1e;
   }
 
   .version-hint {
@@ -657,99 +337,9 @@
     border-radius: 4px;
   }
 
-  .collapse-header {
-    padding: 12px 15px;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #252525;
-  }
-
-  .arrow {
-    transition: 0.3s;
-    font-size: 12px;
-  }
-
-  .arrow.rotated {
-    transform: rotate(180deg);
-  }
-
-  .collapse-content {
-    padding: 15px;
-    max-height: 250px;
-    overflow-y: auto;
-  }
-
-  .collapse-content ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  .collapse-content li {
-    margin-bottom: 12px;
-    border-bottom: 1px solid #333;
-    padding-bottom: 8px;
-  }
-
-  .collapse-content p {
-    margin: 4px 0;
-    font-size: 13px;
-    color: #bbb;
-    line-height: 1.4;
-  }
-
-  .gold {
-    color: #ffcf00;
-    font-weight: bold;
-    margin-bottom: 5px;
-    display: inline-block;
-  }
-
-  .activatedListDetails {
-    text-align: left;
-  }
-
-  @media (max-width: 1024px) {
-    /* 已激活效果详情：移动端取消 250px 内部滚动上限，
-       随页面自然滚动，避免手指落在详情区时只滚详情不滚页面 */
-    .collapse-content {
-      max-height: none;
-      overflow-y: visible;
-    }
-  }
-
   @media (max-width: 768px) {
     .my-team {
       gap: 10px;
-    }
-
-    .panel-header {
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 8px;
-      padding: 4px 0 10px;
-    }
-
-    .panel-header h3 {
-      font-size: 15px;
-    }
-
-    .limit-setter {
-      order: 3;
-      margin-left: auto;
-      font-size: 12px;
-    }
-
-    .new-team-btn,
-    .clear-btn {
-      padding: 8px 12px;
-      font-size: 13px;
-    }
-
-    .clear-btn {
-      padding: 8px 10px;
     }
 
     .drag-area {
@@ -767,45 +357,6 @@
 
     .team-grid .op-unit {
       width: auto;
-    }
-
-    .name-label {
-      font-size: 11px;
-      margin-top: 4px;
-    }
-
-    .equip-badge {
-      width: 22px;
-      height: 22px;
-    }
-
-    .equip-badges {
-      left: 2px;
-      bottom: 2px;
-      gap: 3px;
-    }
-
-    .remove-btn {
-      width: 22px;
-      height: 22px;
-      top: -8px;
-      right: -8px;
-      font-size: 14px;
-      line-height: 1;
-    }
-
-    .collapse-header {
-      padding: 10px 12px;
-      font-size: 13px;
-    }
-
-    .collapse-content {
-      padding: 12px;
-      /* max-height 已在 1024 媒体查询中清除 */
-    }
-
-    .collapse-content p {
-      font-size: 12px;
     }
 
     .version-hint {
