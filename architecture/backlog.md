@@ -75,5 +75,5 @@ git checkout -- src    # 量完就还原
 剩下的是商店刷新、招募概率、资金与等级、敌人与站位、策略轴记录与分享。
 明确不做：战斗模拟、技能伤害、寻路 AI、胜负判定、策略分支比较、社区系统。
 
-规则素材在 [`docs/rules/PLAYING.md`](../docs/rules/PLAYING.md)，来自「完整复刻卫戍协议」，
-范围大于本项目。**用到哪条抽哪条**，落成 `docs/rules/` 下的单独文件，不整份引用。
+规则按需自撰，落到 `docs/rules/` 下的单独文件，写法和来源见
+[`docs/rules/README.md`](../docs/rules/README.md)。

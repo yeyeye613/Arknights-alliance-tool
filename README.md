@@ -159,9 +159,10 @@ npm run dev
 | [architecture/data-flow.md](architecture/data-flow.md) | 启动、版本切换、盟约统计、分享码等流程 |
 | [architecture/backlog.md](architecture/backlog.md) | 未完成事项与起手方式 |
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | 开发环境、代码检查、分层约束、提交规范 |
+| [docs/rules/README.md](docs/rules/README.md) | 规则素材的写法与来源说明 |
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | 版本变更记录 |
 | [docs/SECURITY.md](docs/SECURITY.md) | 安全问题反馈方式 |
-| [LICENSE](LICENSE) | MIT |
+| [LICENSE](LICENSE) | MIT（仅覆盖本仓库代码） |
 
 ## 数据说明
 
@@ -175,9 +176,10 @@ npm run dev
 ## 致谢
 
 - 数据来源：[PRTS 明日方舟中文 Wiki](https://prts.wiki)
+- 规则考据参考 [sganggs/Stronghold-Protocol](https://github.com/sganggs/Stronghold-Protocol)（GPL-3.0-or-later，仅代码）
 - 游戏素材版权归上海鹰角网络科技有限公司所有
 - 本项目仅用于配队研究与交流，不作商业用途
 
 ## 开源协议
 
-[MIT](LICENSE)
+代码以 [MIT](LICENSE) 发布。《明日方舟》及「卫戍协议」相关的名称、角色、美术与游戏文本、数据，版权归原权利人所有，不在 MIT 范围内。
