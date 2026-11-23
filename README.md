@@ -158,7 +158,6 @@ npm run dev
 | [architecture/data-model.md](architecture/data-model.md) | 核心数据结构、存储键与不变量 |
 | [architecture/data-flow.md](architecture/data-flow.md) | 启动、版本切换、盟约统计、分享码等流程 |
 | [refactoring-plan.md](docs/architecture/refactoring-plan.md) | 架构审计结论与分阶段重构计划（P0–P5） |
-| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | 贡献流程与开发规范 |
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | 版本变更记录 |
 | [docs/SECURITY.md](docs/SECURITY.md) | 安全问题反馈方式 |
 | [LICENSE](LICENSE) | MIT |
@@ -170,7 +169,7 @@ npm run dev
 - [卫戍协议：盟约](https://prts.wiki/w/卫戍协议：盟约)
 - [卫戍协议·规程 / PRTS盟约记录](https://prts.wiki/w/卫戍协议·规程/PRTS盟约记录)
 
-数据结构与字段含义见 [architecture/data-model.md](architecture/data-model.md)；需要更新赛季数据时，按 [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md#数据更新流程) 的步骤操作。
+数据结构与字段含义见 [architecture/data-model.md](architecture/data-model.md)；新增赛季数据集与码表维护见 [architecture/module-map.md](architecture/module-map.md)（码表由 `npm run codebook` 只在末尾追加）。
 
 ## 致谢
 

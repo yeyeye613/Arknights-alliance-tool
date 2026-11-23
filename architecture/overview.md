@@ -125,7 +125,7 @@ flowchart TB
 
 文字分享码要在聊天软件里传递，长度直接决定体验。v1/v2 是 `JSON → deflate → base64`，一个 12 人编队 179 字符；v3 改为二进制 + 码表引用 + varint + Base62，同编队 40–50 字符。
 
-代价是协议脆弱性：码表顺序即协议的一部分，因此有「码表只追加」的铁律和 `npm run codebook` 脚本兜底（见 [CONTRIBUTING.md](../docs/CONTRIBUTING.md#分享码兼容性铁律)）。
+代价是协议脆弱性：码表顺序即协议的一部分，因此有「码表只追加」的铁律和 `npm run codebook` 脚本兜底（不变量见 [data-model.md](data-model.md)，脚本见 [module-map.md](module-map.md)）。
 
 ### 5. PWA 缓存：外壳预缓存，图片运行时缓存
 

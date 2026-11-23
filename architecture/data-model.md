@@ -307,4 +307,4 @@ erDiagram
 | 盟约新增 `effects.type` | 检查 `CovenantTooltip.vue` 的 `typeClass` 映射，未命中会落到默认样式 |
 | 干员新增字段并要进分享码 | `shareCodec.ts` 的 `writeOperator` / `readOperator` + 开新 magic（不能复用 `0xc0`） |
 | 编队新增字段并要落库 | `useSavedTeams.js` 的 `saveTeam` / `updateTeam` + 兼容旧存档的读取兜底 |
-| 新增持久化键 | 本节表格 + `CONTRIBUTING.md` 的分层约定（只允许 composable 写） |
+| 新增持久化键 | 本节表格 + [overview.md](overview.md) 的分层规则（写存储只能经 `infrastructure/storage`，由 composable 调用） |
