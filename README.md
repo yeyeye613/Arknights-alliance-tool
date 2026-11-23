@@ -164,6 +164,7 @@ npm run dev
 | [docs/rules/README.md](docs/rules/README.md) | 规则素材的写法与来源说明 |
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | 版本变更记录 |
 | [docs/SECURITY.md](docs/SECURITY.md) | 安全问题反馈方式 |
+| [THIRD-PARTY.md](THIRD-PARTY.md) | 数据与图像的来源、权利人与许可状态 |
 | [LICENSE](LICENSE) | MIT（仅覆盖本仓库代码） |
 
 ## 数据说明
@@ -175,13 +176,13 @@ npm run dev
 
 数据结构与字段含义见 [docs/architecture/data-model.md](docs/architecture/data-model.md)；新增赛季数据集与码表维护见 [docs/architecture/module-map.md](docs/architecture/module-map.md)（码表由 `npm run codebook` 只在末尾追加）。
 
+PRTS 站点对其编辑者的整理工作采用 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans) 授权，但其版权声明把游戏文本原文与图像另归鹰角，不适用该许可。数据与图像的权利人、授权范围与使用条件见 [THIRD-PARTY.md](THIRD-PARTY.md)。
+
 ## 致谢
 
 - 数据来源：[PRTS 明日方舟中文 Wiki](https://prts.wiki)
 - 规则考据参考 [sganggs/Stronghold-Protocol](https://github.com/sganggs/Stronghold-Protocol)（GPL-3.0-or-later，仅代码）
-- 游戏素材版权归上海鹰角网络科技有限公司所有
-- 本项目仅用于配队研究与交流，不作商业用途
 
 ## 开源协议
 
-代码以 [MIT](LICENSE) 发布。《明日方舟》及「卫戍协议」相关的名称、角色、美术与游戏文本、数据，版权归原权利人所有，不在 MIT 范围内。
+代码以 [MIT](LICENSE) 发布。数据与图像不随代码授权，其权利人保留全部权利，详见 [THIRD-PARTY.md](THIRD-PARTY.md)。

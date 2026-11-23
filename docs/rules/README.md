@@ -10,7 +10,7 @@
 
 ## 来源与许可
 
-规则依据来自《明日方舟》游戏内文本与 [PRTS 明日方舟中文 Wiki](https://prts.wiki)。游戏名称、文本与数据的版权归原权利人，不在本仓库 MIT 许可范围内。
+规则依据来自《明日方舟》游戏内文本与 [PRTS 明日方舟中文 Wiki](https://prts.wiki)。游戏文本与数据的权利人及授权范围见 [THIRD-PARTY.md](../../THIRD-PARTY.md)。
 
 规则考据参考 [sganggs/Stronghold-Protocol](https://github.com/sganggs/Stronghold-Protocol)（GPL-3.0-or-later）。该项目将其所涉游戏文本与数据排除在 GPL 之外，并要求不单独再分发，因此只引用其结论，不复制其正文；需要对照原文时从上游获取。
 
