@@ -1,6 +1,24 @@
 <template>
   <section class="equipment-pool">
-    <header class="equip-head">
+    <!-- 窄屏把头部换成可折叠的一条：同样带标题与数量，顺带能收起列表 -->
+    <CollapseBar
+      v-if="isNarrow"
+      title="装备池"
+      :count="filteredList.length"
+      :collapsed="collapsed"
+      @toggle="collapsed = !collapsed"
+    >
+      <span
+        v-if="staged.length > 0"
+        class="equip-staged in-bar"
+        >{{ staged.length }} 件待装备</span
+      >
+    </CollapseBar>
+
+    <header
+      v-else
+      class="equip-head"
+    >
       <span class="equip-title">装备池</span>
       <span class="equip-count">{{ filteredList.length }}</span>
       <span
@@ -10,7 +28,10 @@
       >
     </header>
 
-    <div class="equip-body">
+    <div
+      v-show="!isCollapsed"
+      class="equip-body"
+    >
       <input
         v-model="keyword"
         class="equip-search"
@@ -32,7 +53,7 @@
       </div>
 
       <p class="equip-hint">
-        点击放入编队下方的临时装备池，或直接把图标拖到干员头像上
+        {{ hintText }}
       </p>
 
       <div class="equip-grid scrollable">
@@ -42,7 +63,7 @@
           type="button"
           class="equip-card"
           :class="{ staged: staged.includes(item.name) }"
-          draggable="true"
+          :draggable="canDrag"
           :title="`${item.name}｜${item.base}`"
           @dragstart="handleDragStart($event, item.name)"
           @click="emit('stage', item.name)"
@@ -76,7 +97,7 @@
 </template>
 
 <script setup>
-  import { computed, ref } from "vue";
+  import { computed, ref, watch } from "vue";
   import { useGameVersion } from "@/features/game-version";
   import {
     TIER_LABELS,
@@ -84,6 +105,9 @@
   } from "@/data/equipment.js";
   import { getEquipmentIconUrl, handleImgError } from "@/shared/lib/assets.js";
   import { EQUIPMENT_DRAG_TYPE } from "@/features/equipment/composables/useEquipmentDrag.js";
+  import CollapseBar from "@/shared/components/CollapseBar.vue";
+  import { useNarrowViewport } from "@/shared/composables/useNarrowViewport.js";
+  import { useFinePointer } from "@/shared/composables/useFinePointer.js";
 
   // 模板直接引用 staged，脚本里用不到 props 对象
   defineProps({
@@ -94,6 +118,25 @@
   const emit = defineEmits(["stage"]);
 
   const { currentVersion } = useGameVersion();
+
+  // 布局与交互分开判断：窄屏给折叠条，没有鼠标才把「拖动」从文案里去掉
+  const { isNarrow } = useNarrowViewport();
+  const { hasFinePointer: canDrag } = useFinePointer();
+
+  const collapsed = ref(false);
+  /** 折叠只在单列有意义，双列始终展开 */
+  const isCollapsed = computed(() => isNarrow.value && collapsed.value);
+
+  watch(isNarrow, (narrow) => {
+    if (!narrow) collapsed.value = false;
+  });
+
+  /** 有鼠标才敢教人拖；触屏只讲点选 */
+  const hintText = computed(() =>
+    canDrag.value
+      ? "点击放入编队下方的临时装备池，或直接把图标拖到干员头像上"
+      : "点击放入下方临时装备池，或直接点击编队干员头像",
+  );
 
   const TIER_OPTIONS = [
     { value: 0, label: "全部" },
@@ -182,6 +225,11 @@
     color: #ffcf00;
     font-size: 10px;
     line-height: 1.5;
+  }
+
+  /* 放进折叠条时紧跟数量徽标，右对齐交给条上的提示 */
+  .equip-staged.in-bar {
+    margin-left: 0;
   }
 
   .equip-body {

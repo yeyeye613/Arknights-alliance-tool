@@ -10,11 +10,7 @@
         class="stage-count"
         >{{ items.length }}</span
       >
-      <span class="stage-hint">{{
-        items.length > 0
-          ? "拖到上方干员头像上装备，或先点装备再点干员"
-          : "在「装备池」里点装备，就会落到这里"
-      }}</span>
+      <span class="stage-hint">{{ hintText }}</span>
       <button
         v-if="items.length > 0"
         type="button"
@@ -35,8 +31,8 @@
         type="button"
         class="stage-item"
         :class="{ selected: selected === name }"
-        draggable="true"
-        :title="`${name}：拖到干员头像上装备，点击可选中`"
+        :draggable="canDrag"
+        :title="itemTitle(name)"
         @dragstart="handleDragStart($event, name)"
         @click="emit('select', name)"
       >
@@ -59,22 +55,47 @@
       v-else
       class="stage-empty"
     >
-      这里会暂存「装备池」里点选的装备，方便拖到上方干员
+      {{ emptyText }}
     </p>
   </section>
 </template>
 
 <script setup>
-  import { ref, watch } from "vue";
+  import { computed, ref, watch } from "vue";
   import { getEquipmentIconUrl, handleImgError } from "@/shared/lib/assets.js";
   import { EQUIPMENT_DRAG_TYPE } from "@/features/equipment/composables/useEquipmentDrag.js";
 
   const props = defineProps({
     items: { type: Array, default: () => [] },
     selected: { type: String, default: "" },
+    /** 有鼠标指针才谈得上拖拽；触屏改为点头像装备 */
+    canDrag: { type: Boolean, default: true },
   });
 
   const emit = defineEmits(["select", "remove", "clear"]);
+
+  /** 触屏没有拖拽，文案不能教人拖；有鼠标时两种方式都可用 */
+  const hintText = computed(() => {
+    if (props.items.length === 0) {
+      return props.canDrag
+        ? "在「装备池」里点装备，就会落到这里"
+        : "在「装备池」里点装备，再点编队干员即可装备";
+    }
+    return props.canDrag
+      ? "拖到上方干员头像上装备，或先点装备再点干员"
+      : "点一件装备选中，再点编队干员头像即可装备";
+  });
+
+  const emptyText = computed(() =>
+    props.canDrag
+      ? "这里会暂存「装备池」里点选的装备，方便拖到上方干员"
+      : "这里会暂存「装备池」里点选的装备，再点编队干员即可装备",
+  );
+
+  const itemTitle = (name) =>
+    props.canDrag
+      ? `${name}：拖到干员头像上装备，点击可选中`
+      : `${name}：点击选中，再点编队干员头像装备`;
 
   /** 新装备进入时轻微闪一下，提示用户接下来该拖到干员上 */
   const pulsing = ref(false);

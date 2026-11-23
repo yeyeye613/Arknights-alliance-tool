@@ -80,11 +80,17 @@ export function createTooltip({ width, height, initialState }) {
      * 显示浮层并写入内容
      * @param {MouseEvent} event 触发事件，用其坐标定位
      * @param {Object} patch 本次要写入的自有字段
+     * @param {{ sticky?: boolean }} [options] sticky 为真时不在触屏上自动消失，
+     *   用于「点击查看详情」——浮层由调用方在点别处时主动关闭
      */
-    show(event, patch) {
+    show(event, patch, { sticky = false } = {}) {
       Object.assign(state, patch, { visible: true });
       updatePosition(event);
-      scheduleAutoHide();
+      if (sticky) {
+        clearAutoHide();
+      } else {
+        scheduleAutoHide();
+      }
     },
 
     /** 跟随鼠标移动 */

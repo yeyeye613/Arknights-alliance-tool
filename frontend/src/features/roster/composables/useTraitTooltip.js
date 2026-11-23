@@ -24,6 +24,7 @@ const tooltip = createTooltip({
  * @param {Array} traits - 特质列表
  * @param {string} [note] - 附加说明（如跨版本提示）
  * @param {Array<string>} [covenants] - 干员所属盟约
+ * @param {boolean} [sticky] - 为真时不自动消失（点击触发的详情，由调用方关闭）
  */
 export function showTraitTooltip(
   event,
@@ -31,13 +32,18 @@ export function showTraitTooltip(
   traits,
   note = "",
   covenants = [],
+  sticky = false,
 ) {
-  tooltip.show(event, {
-    name,
-    traits: Array.isArray(traits) ? traits : [],
-    covenants: Array.isArray(covenants) ? covenants : [],
-    note,
-  });
+  tooltip.show(
+    event,
+    {
+      name,
+      traits: Array.isArray(traits) ? traits : [],
+      covenants: Array.isArray(covenants) ? covenants : [],
+      note,
+    },
+    { sticky },
+  );
 }
 
 /** 跟随鼠标移动 */

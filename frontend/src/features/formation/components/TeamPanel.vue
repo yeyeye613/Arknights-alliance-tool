@@ -136,6 +136,8 @@
 
   /** 悬停展示干员特质与所属盟约（跨版本干员附提示） */
   const hoverTraits = (event, op) => {
+    // 已选中装备时，点头像是在说「装给它」，不要用详情浮层挡在前面
+    if (props.selectedEquipment) return;
     showTraitTooltip(
       event,
       op.name,

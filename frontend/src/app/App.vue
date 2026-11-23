@@ -82,6 +82,7 @@
               v-if="hasEquipmentPool && stagedEquipments.length > 0"
               :items="stagedEquipments"
               :selected="selectedEquipment"
+              :can-drag="canDrag"
               @select="selectEquipment"
               @remove="unstageEquipment"
               @clear="clearStagedEquipments"
@@ -177,6 +178,7 @@
   import { useToast } from "@/app/useToast.js";
   import { getGameVersion } from "@/data/versions.js";
   import PwaUpdatePrompt from "@/shared/components/PwaUpdatePrompt.vue";
+  import { useFinePointer } from "@/shared/composables/useFinePointer.js";
 
   // 游戏版本
   const { currentVersion, currentVersionId, setVersion } = useGameVersion();
@@ -209,6 +211,8 @@
   const stagedEquipments = ref([]);
   /** 当前选中的装备（点选后再点干员即可装备，触屏友好） */
   const selectedEquipment = ref("");
+  /** 触屏只有点选，没有拖拽——提示文案跟着光标能力分叉 */
+  const { hasFinePointer: canDrag } = useFinePointer();
 
   const stageEquipment = (name) => {
     if (!name) return;
@@ -216,7 +220,11 @@
       stagedEquipments.value = [...stagedEquipments.value, name];
     }
     selectedEquipment.value = name;
-    showTempMessage(`「${name}」已放入临时装备池，拖到干员头像上装备`);
+    showTempMessage(
+      canDrag.value
+        ? `「${name}」已放入临时装备池，拖到干员头像上装备`
+        : `「${name}」已选中，点击编队中的干员头像即可装备`,
+    );
   };
 
   const selectEquipment = (name) => {
@@ -334,7 +342,12 @@
   const handleAddToTeam = (op) => {
     if (!addToTeam(op)) {
       showTempMessage(`编队已满！当前上限为 ${teamLimit.value}`);
+      return;
     }
+    // 加入成功也要有反馈：干员池在侧栏，编队可能不在视野里
+    showTempMessage(
+      `已加入「${op.name}」（${team.value.length}/${teamLimit.value}）`,
+    );
   };
 
   // 包装openSaveTeamModal

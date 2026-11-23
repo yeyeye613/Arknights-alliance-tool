@@ -76,15 +76,19 @@
   /** 头像路径只由名字决定，不存进实例——资源目录换了也不用洗存档 */
   const avatar = computed(() => getAvatarUrl(props.op.name));
 
-  const handleRootClick = () => {
+  /**
+   * 点击上抛时带上原生事件：单列下点击是「查看详情」，浮层要按点击坐标定位
+   * @param {MouseEvent} event
+   */
+  const handleRootClick = (event) => {
     if (props.pickOn === "root") {
-      emit("pick");
+      emit("pick", event);
     }
   };
 
-  const handleImageClick = () => {
+  const handleImageClick = (event) => {
     if (props.pickOn === "image") {
-      emit("pick");
+      emit("pick", event);
     }
   };
 </script>
@@ -96,6 +100,8 @@
     width: 75px;
     text-align: center;
     cursor: pointer;
+    /* 触屏靠双击入队：禁掉双击缩放，否则第二下会被浏览器当放大手势吃掉 */
+    touch-action: manipulation;
   }
 
   /* 用「直接子元素」限定头像，避免命中装备角标里的小图标 */

@@ -8,6 +8,15 @@
 
 ## [Unreleased]
 
+### 变更
+
+移动端交互按**指针能力**（`hover: hover` 且 `pointer: fine`）分叉，不再按屏幕宽度判断——触屏即使排成两列也拖不准，长按拖拽还会抢走页面滚动：
+
+- 干员池改为单击看详情、双击加入编队；详情浮层固定显示，点空白处关闭
+- 加入编队后提示「已加入「X」（3/8）」，满员仍提示上限
+- 装备池与临时装备池的文案在触屏上只讲点选，有鼠标时仍可拖拽
+- 折叠条抽成 `CollapseBar`，干员池与装备池在窄屏都能收起
+
 ### 重构
 
 架构审计后的 P0 / P1 两步（详见 [docs/architecture/refactoring-plan.md](architecture/refactoring-plan.md)），产品行为不变：

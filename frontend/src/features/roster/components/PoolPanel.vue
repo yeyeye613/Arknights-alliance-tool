@@ -20,21 +20,22 @@
       @hover-leave="hideCovenantTooltip"
     />
 
-    <!-- 小屏折叠开关：仅在移动端显示，用于把干员列表收起以腾出编队空间 -->
-    <button
-      type="button"
-      class="pool-toggle"
-      :class="{ collapsed: isPoolCollapsed }"
-      :aria-expanded="!isPoolCollapsed"
-      @click="togglePoolCollapse"
+    <!-- 小屏折叠开关：仅在单列显示，用于把干员列表收起以腾出编队空间 -->
+    <CollapseBar
+      v-if="isMobile"
+      title="干员池"
+      :count="filteredPool.length"
+      :collapsed="isPoolCollapsed"
+      @toggle="togglePoolCollapse"
+    />
+
+    <!-- 触屏没有拖拽，交互改成「点一次看详情、点两次入队」，先说明再让人试 -->
+    <p
+      v-if="!canDrag && !isPoolCollapsed"
+      class="pool-tap-hint"
     >
-      <span class="pool-toggle-title">干员池</span>
-      <span class="pool-toggle-count">{{ filteredPool.length }}</span>
-      <span class="pool-toggle-hint">{{
-        isPoolCollapsed ? "已收起，点击展开" : "点击收起"
-      }}</span>
-      <span class="pool-toggle-arrow">▼</span>
-    </button>
+      轻点查看详情，双击加入编队
+    </p>
 
     <div
       v-show="!isPoolCollapsed"
@@ -45,7 +46,7 @@
         :group="{ name: 'ops', pull: 'clone', put: false }"
         :sort="false"
         class="pool-grid"
-        :disabled="isMobile"
+        :disabled="!canDrag"
       >
         <OperatorCard
           v-for="op in filteredPool"
@@ -53,7 +54,7 @@
           :op="op"
           :tier="getTier(op)"
           pick-on="root"
-          @pick="addToTeam(op)"
+          @pick="handlePoolPick(op, $event)"
           @mouseenter="hoverTraits($event, op)"
           @mousemove="moveTraitTooltip"
           @mouseleave="hideTraitTooltip"
@@ -80,12 +81,13 @@
 </template>
 
 <script setup>
-  import { computed, onMounted, onUnmounted, ref } from "vue";
+  import { computed, onMounted, onUnmounted, ref, watch } from "vue";
   import { VueDraggable } from "vue-draggable-plus";
 
   import SelfOperatorDialog from "@/features/roster/components/SelfOperatorDialog.vue";
   import OperatorCard from "@/features/roster/components/OperatorCard.vue";
   import PoolFilters from "@/features/roster/components/PoolFilters.vue";
+  import CollapseBar from "@/shared/components/CollapseBar.vue";
   import { getOperatorCovenants, getOperatorTraits } from "@/data/versions.js";
   import { useGameVersion } from "@/features/game-version";
   import { usePoolFilters } from "@/features/roster/composables/usePoolFilters.js";
@@ -102,6 +104,8 @@
     showCovenantTooltip,
   } from "@/features/covenants";
   import { createOperatorInstance, operatorKey } from "@/entities/operator";
+  import { useNarrowViewport } from "@/shared/composables/useNarrowViewport.js";
+  import { useFinePointer } from "@/shared/composables/useFinePointer.js";
 
   const {
     currentVersion,
@@ -109,9 +113,6 @@
     coreCovenants,
     additionalCovenants,
   } = useGameVersion();
-
-  /** 移动端断点，与样式中的媒体查询保持一致 */
-  const MOBILE_QUERY = "(max-width: 1024px)";
 
   const {
     filters,
@@ -136,26 +137,30 @@
   const showAddOpModal = ref(false);
   const { selfOperators } = useSelfOperators();
 
-  // 移动端：干员池折叠
-  const isMobile = ref(false);
+  // 布局：单列才出现折叠条，与样式里的媒体查询同源
+  const { isNarrow: isMobile } = useNarrowViewport();
+
+  // 交互：拖动还是点按只看有没有鼠标——触屏即使排成两列也拖不准，
+  // 长按拖拽还会抢走页面滚动，所以不再按宽度判断
+  const { hasFinePointer } = useFinePointer();
+  const canDrag = hasFinePointer;
+
   const poolCollapsed = ref(false);
-  /** 仅在移动端生效，桌面端始终展开 */
+  /** 折叠只在单列有意义，双列始终展开 */
   const isPoolCollapsed = computed(
     () => isMobile.value && poolCollapsed.value,
   );
-  let mobileMediaQuery = null;
 
   const togglePoolCollapse = () => {
     poolCollapsed.value = !poolCollapsed.value;
   };
 
-  /** 视口跨过断点时同步状态：回到宽屏自动展开，避免“列表消失” */
-  const handleViewportChange = (event) => {
-    isMobile.value = event.matches;
-    if (!event.matches) {
+  /** 回到双列时自动展开，避免「列表消失」 */
+  watch(isMobile, (narrow) => {
+    if (!narrow) {
       poolCollapsed.value = false;
     }
-  };
+  });
 
   const emit = defineEmits(["addToTeam", "notify"]);
 
@@ -200,37 +205,65 @@
     emit("addToTeam", op);
   };
 
+  /** 双击判定窗口：两次点击间隔小于它算双击 */
+  const DOUBLE_TAP_MS = 320;
+  /** 上一次点击的干员 key，用于识别双击 */
+  let lastTap = { key: "", at: 0 };
+
+  /**
+   * 点按干员：有鼠标时一次点击就入队；
+   * 触屏上第一次看详情，快速连点两次才入队。
+   *
+   * 双击的第二次点击立即入队，所以单击不必等判定窗口，
+   * 不会出现「点完愣一下才出详情」。
+   */
+  const handlePoolPick = (op, event) => {
+    if (canDrag.value) {
+      addToTeam(op);
+      return;
+    }
+
+    const key = operatorKey(op);
+    const now = Date.now();
+    const isDoubleTap = lastTap.key === key && now - lastTap.at < DOUBLE_TAP_MS;
+
+    if (isDoubleTap) {
+      lastTap = { key: "", at: 0 };
+      hideTraitTooltip();
+      addToTeam(op);
+      return;
+    }
+
+    lastTap = { key, at: now };
+    showTraitTooltip(
+      event,
+      op.name,
+      getOperatorTraits(op.name, currentVersion.value),
+      "",
+      getOperatorCovenants(op.name, currentVersion.value),
+      true,
+    );
+  };
+
+  /** 详情由点击触发，触屏没有 mouseleave，改在点空白处关闭 */
+  const hideDetailOnOutsideTap = (event) => {
+    if (canDrag.value) return;
+    const target = event.target;
+    if (target instanceof Element && target.closest(".op-unit")) return;
+    hideTraitTooltip();
+  };
+
   const handleSelfOperatorsConfirm = (operators) => {
     selfOperators.value = operators;
     showAddOpModal.value = false;
   };
 
   onMounted(() => {
-    // 监听小屏断点，用于干员池折叠
-    if (
-      typeof window !== "undefined" &&
-      typeof window.matchMedia === "function"
-    ) {
-      mobileMediaQuery = window.matchMedia(MOBILE_QUERY);
-      isMobile.value = mobileMediaQuery.matches;
-      if (typeof mobileMediaQuery.addEventListener === "function") {
-        mobileMediaQuery.addEventListener("change", handleViewportChange);
-      } else {
-        mobileMediaQuery.addListener?.(handleViewportChange);
-      }
-    }
+    document.addEventListener("pointerdown", hideDetailOnOutsideTap, true);
   });
 
   onUnmounted(() => {
-    if (!mobileMediaQuery) {
-      return;
-    }
-    if (typeof mobileMediaQuery.removeEventListener === "function") {
-      mobileMediaQuery.removeEventListener("change", handleViewportChange);
-    } else {
-      mobileMediaQuery.removeListener?.(handleViewportChange);
-    }
-    mobileMediaQuery = null;
+    document.removeEventListener("pointerdown", hideDetailOnOutsideTap, true);
   });
 </script>
 
@@ -246,11 +279,7 @@
     gap: 12px;
   }
 
-  /* 移动端折叠开关：默认隐藏，仅小屏出现 */
-  .pool-toggle {
-    display: none;
-  }
-
+  /* 移动端折叠开关由 CollapseBar 渲染，这里只管列表区 */
   .drag-area {
     padding: 15px;
     background: #181818;
@@ -261,6 +290,15 @@
     /* 仅在元素是滚动容器（overflow-y:auto/scroll）时生效，
        桌面端 .scrollable 会把它变成滚动区 */
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* 单列操作提示：常驻一行小字，比一次性 toast 更不容易被忽略 */
+  .pool-tap-hint {
+    margin: 0;
+    padding: 0 2px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: #777;
   }
 
   .pool-empty {
@@ -319,66 +357,7 @@
       min-height: 0;
     }
 
-    /* 干员池折叠条：堆叠布局时可用，把长列表收起腾出编队空间 */
-    .pool-toggle {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      width: 100%;
-      padding: 10px 12px;
-      background: #1b1b1b;
-      border: 1px solid #333;
-      border-radius: 6px;
-      color: #ccc;
-      font-size: 13px;
-      line-height: 1;
-      cursor: pointer;
-      text-align: left;
-    }
-
-    .pool-toggle:active {
-      background: #232323;
-    }
-    .pool-toggle-title {
-      font-weight: bold;
-      color: #eee;
-    }
-
-    .pool-toggle-count {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 22px;
-      height: 20px;
-      padding: 0 6px;
-      background: rgba(255, 207, 0, 0.16);
-      border: 1px solid rgba(255, 207, 0, 0.4);
-      border-radius: 10px;
-      color: #ffcf00;
-      font-size: 11px;
-      font-weight: bold;
-    }
-
-    .pool-toggle-hint {
-      margin-left: auto;
-      font-size: 11px;
-      color: #777;
-      white-space: nowrap;
-    }
-
-    .pool-toggle-arrow {
-      font-size: 9px;
-      color: #888;
-      transition: transform 0.2s;
-    }
-
-    .pool-toggle.collapsed .pool-toggle-arrow {
-      transform: rotate(-90deg);
-    }
-
-    .pool-toggle.collapsed .pool-toggle-hint {
-      color: #999;
-    }
+    /* 干员池折叠条由 CollapseBar 自带样式，这里只处理列表区的滚动与网格 */
   }
 
   @media (max-width: 768px) {
@@ -404,10 +383,6 @@
   }
 
   @media (max-width: 420px) {
-    .pool-toggle-hint {
-      display: none;
-    }
-
     .pool-grid {
       grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
       gap: 12px 8px;
