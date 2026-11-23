@@ -146,9 +146,9 @@
 ### 文档
 
 - 重写根目录 `README.md`：补充真实截图、双版本与装备能力、分享码 v3 说明、文档索引
-- 新增 `architecture/backlog.md`：唯一待办清单（S11 类型化、重写 CONTRIBUTING、目录统一等），做完即删条目
+- 新增 `architecture/backlog.md`：唯一待办清单（S11 类型化、目录统一、对局模拟等），做完即删条目
 - P0–P5 重构计划与 D3/S13/S11 技术债方案移入 `docs/archive/`：六个阶段全部完成，两份文档转为决策依据，不再当计划读
-- 新增后删除 `CONTRIBUTING.md`：内容偏项目介绍，照着做不出一次可提交的改动，待按操作手册重写（四块骨架见 backlog）
+- 新增 `docs/CONTRIBUTING.md`：开发环境、`npm run verify`、分层约束与提交规范
 - 删除 `frontend/docs/README.md` 与 `frontend/README.md`：文档统一到根目录。前者指向不存在的 `frontend/README.md`，列的 `SaveTeamModal` / `src/composables` 等早已不存在
 - 新增 `architecture/overview.md` / `module-map.md` / `data-model.md` / `data-flow.md`
 - 新增 `CHANGELOG.md`、`SECURITY.md`、`LICENSE`（MIT）
