@@ -2,24 +2,26 @@ name: 部署前端到 GitHub Pages
 
 on:
   push:
-    branches: [ master ] # 当你向 main 分支推送代码时触发
+    branches: [ master ] # 推送到 master 时触发
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 设置 Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: 安装并打包前端
         run: |
           cd frontend
-          npm install
+          npm ci
           npm run build
 
       - name: 发布到 GitHub Pages 分支
