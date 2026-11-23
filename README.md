@@ -144,8 +144,10 @@ npm run dev
 │     ├─ infrastructure       # 存储键、读写封装、仓储与 PWA
 │     ├─ data                 # 版本注册表与各版本数据集
 │     └─ tests                # 跨 feature 集成：冒烟、分享码兼容、存档兼容、分层护栏
-├─ architecture               # 架构文档
-├─ docs/screenshots           # README 截图
+├─ docs
+│  ├─ architecture           # 架构文档
+│  ├─ rules                  # 规则素材
+│  └─ screenshots            # README 截图
 └─ .github/workflows/deploy.yml
 ```
 
@@ -153,11 +155,11 @@ npm run dev
 
 | 文档 | 内容 |
 | --- | --- |
-| [architecture/overview.md](architecture/overview.md) | 总体架构、分层、关键设计决策 |
-| [architecture/module-map.md](architecture/module-map.md) | 模块职责、入口与依赖方向 |
-| [architecture/data-model.md](architecture/data-model.md) | 核心数据结构、存储键与不变量 |
-| [architecture/data-flow.md](architecture/data-flow.md) | 启动、版本切换、盟约统计、分享码等流程 |
-| [architecture/backlog.md](architecture/backlog.md) | 未完成事项与起手方式 |
+| [docs/architecture/overview.md](docs/architecture/overview.md) | 总体架构、分层、关键设计决策 |
+| [docs/architecture/module-map.md](docs/architecture/module-map.md) | 模块职责、入口与依赖方向 |
+| [docs/architecture/data-model.md](docs/architecture/data-model.md) | 核心数据结构、存储键与不变量 |
+| [docs/architecture/data-flow.md](docs/architecture/data-flow.md) | 启动、版本切换、盟约统计、分享码等流程 |
+| [docs/architecture/backlog.md](docs/architecture/backlog.md) | 未完成事项与起手方式 |
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | 开发环境、代码检查、分层约束、提交规范 |
 | [docs/rules/README.md](docs/rules/README.md) | 规则素材的写法与来源说明 |
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | 版本变更记录 |
@@ -171,7 +173,7 @@ npm run dev
 - [卫戍协议：盟约](https://prts.wiki/w/卫戍协议：盟约)
 - [卫戍协议·规程 / PRTS盟约记录](https://prts.wiki/w/卫戍协议·规程/PRTS盟约记录)
 
-数据结构与字段含义见 [architecture/data-model.md](architecture/data-model.md)；新增赛季数据集与码表维护见 [architecture/module-map.md](architecture/module-map.md)（码表由 `npm run codebook` 只在末尾追加）。
+数据结构与字段含义见 [docs/architecture/data-model.md](docs/architecture/data-model.md)；新增赛季数据集与码表维护见 [docs/architecture/module-map.md](docs/architecture/module-map.md)（码表由 `npm run codebook` 只在末尾追加）。
 
 ## 致谢
 

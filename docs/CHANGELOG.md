@@ -146,12 +146,12 @@
 ### 文档
 
 - 重写根目录 `README.md`：补充真实截图、双版本与装备能力、分享码 v3 说明、文档索引
-- 新增 `architecture/backlog.md`：唯一待办清单（S11 类型化、目录统一、对局模拟等），做完即删条目
+- 新增 `docs/architecture/backlog.md`：唯一待办清单（S11 类型化、对局模拟等），做完即删条目
 - P0–P5 重构计划与 D3/S13/S11 技术债方案移入 `docs/archive/`：六个阶段全部完成，两份文档转为决策依据，不再当计划读
 - 新增 `docs/CONTRIBUTING.md`：开发环境、`npm run verify`、分层约束与提交规范
 - 移除 `docs/rules/PLAYING.md`：上游许可将游戏文本排除在 GPL 之外并禁止再分发，规则改为按需自撰（见 `docs/rules/README.md`）
 - 删除 `frontend/docs/README.md` 与 `frontend/README.md`：文档统一到根目录。前者指向不存在的 `frontend/README.md`，列的 `SaveTeamModal` / `src/composables` 等早已不存在
-- 新增 `architecture/overview.md` / `module-map.md` / `data-model.md` / `data-flow.md`
+- 新增 `docs/architecture/overview.md` / `module-map.md` / `data-model.md` / `data-flow.md`
 - 新增 `CHANGELOG.md`、`SECURITY.md`、`LICENSE`（MIT）
 - 截图存放于 `docs/screenshots/`
 

@@ -6,9 +6,8 @@
 | # | 事项 | 类型 | 状态 |
 | --- | --- | --- | --- |
 | 1 | S11 渐进类型化 | 技术债 | 未开工，可起手 |
-| 2 | 统一架构文档目录 | 结构 | 待定 |
-| 3 | `PoolPanel` 的只读 computed 绑定 | 小缺陷 | 未开工 |
-| 4 | 对局运营模拟与策略轴 | 功能 | 未排期 |
+| 2 | `PoolPanel` 的只读 computed 绑定 | 小缺陷 | 未开工 |
+| 3 | 对局运营模拟与策略轴 | 功能 | 未排期 |
 
 ---
 
@@ -16,7 +15,7 @@
 
 `vue-tsc` 只检查 `.ts`：`domain/` 已全部是 TS，但 14 个 composable 仍是 `.js`，
 24 个 SFC 全都不带 `lang="ts"`，等于没被类型检查。原方案与实测见
-[archive/debt-plan.md §3](../docs/archive/debt-plan.md)。
+[archive/debt-plan.md §3](../archive/debt-plan.md)。
 
 **起手前先重测。** 下面 80 条错误是 D3 之前量的，D3 删掉 `avatar`/`id` 后
 「属性不存在」那批会自然掉一部分，新数字才是基线：
@@ -49,17 +48,7 @@ git checkout -- src    # 量完就还原
 全局开启语义模糊且会一次点亮全部错误）；type-aware lint（与 `tsc` 收益重叠）。
 理由见归档 §3.2 与 §3.6。
 
-## 2. 统一架构文档目录
-
-现状是分裂的：**活文档在仓库根 `architecture/`**（overview / module-map / data-model / data-flow），
-**历史在 `docs/archive/`**，而 `docs/AGENT.md` 与 `README.md` 又用 `architecture/...` 这种
-以 `docs/` 为基准的写法指过去。两种改法，选一种即可：
-
-- 把根目录四个文件 `git mv` 进 `docs/architecture/`，全仓链接改一轮（一次性，之后只有一套路径）；
-- 保持现状，在 `docs/AGENT.md` 的 Read First 里写明「根 `architecture/` 是活文档，
-  `docs/archive/` 是历史」，避免下一个人找错。
-
-## 3. `PoolPanel` 的只读 computed 绑定
+## 2. `PoolPanel` 的只读 computed 绑定
 
 ```vue
 <VueDraggable v-model="filteredPool" :sort="false" :disabled="!canDrag">
@@ -69,11 +58,11 @@ git checkout -- src    # 量完就还原
 行为无影响（`pull: 'clone'` + `sort: false` 不会回写），改成 `:model-value` 即可根治。
 改完在浏览器控制台确认告警消失、拖拽入队仍正常。
 
-## 4. 对局运营模拟与策略轴
+## 3. 对局运营模拟与策略轴
 
-需求基线是 [`docs/需求文档.md`](../docs/需求文档.md)（956 行 PRD）：阵容构筑已完成，
+需求基线是 [`docs/需求文档.md`](../需求文档.md)（956 行 PRD）：阵容构筑已完成，
 剩下的是商店刷新、招募概率、资金与等级、敌人与站位、策略轴记录与分享。
 明确不做：战斗模拟、技能伤害、寻路 AI、胜负判定、策略分支比较、社区系统。
 
 规则按需自撰，落到 `docs/rules/` 下的单独文件，写法和来源见
-[`docs/rules/README.md`](../docs/rules/README.md)。
+[`docs/rules/README.md`](../rules/README.md)。

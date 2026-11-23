@@ -1,7 +1,7 @@
 # 技术债处置方案：D3 / S13 / S11
 
 **已归档。** S13 与 D3 已完成（2026-11-20），§1、§2 是执行记录，不需要再动手。
-S11 是唯一没开工的一项，已整段搬进 [architecture/backlog.md](../../architecture/backlog.md)，
+S11 是唯一没开工的一项，已整段搬进 [docs/architecture/backlog.md](../architecture/backlog.md)，
 本文档的 §3 保留原始实测与排序依据，供回看出处。
 
 > 对应 `refactoring-plan.md` 4.2「待处理」。三项共同的病根是**缺少显式契约**：

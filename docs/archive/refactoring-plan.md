@@ -2,7 +2,7 @@
 
 **已归档，不是待办清单。** P0–P5 六个阶段全部完成（2026-11-20），本文档只作为决策依据保留：
 每阶段的证据、取舍与偏差都在这里，改代码前想查「当初为什么这么定」再看。
-仍有未完成的事项时，见 [architecture/backlog.md](../../architecture/backlog.md)。
+仍有未完成的事项时，见 [docs/architecture/backlog.md](../architecture/backlog.md)。
 
 > 本文档基于对 46 个源文件的逐一阅读、脚本抽取的真实 import 图、以及针对数据一致性的脚本化核对，**不是**根据文件名或 README 推断。
 >
