@@ -157,7 +157,7 @@ npm run dev
 | [architecture/module-map.md](architecture/module-map.md) | 模块职责、入口与依赖方向 |
 | [architecture/data-model.md](architecture/data-model.md) | 核心数据结构、存储键与不变量 |
 | [architecture/data-flow.md](architecture/data-flow.md) | 启动、版本切换、盟约统计、分享码等流程 |
-| [refactoring-plan.md](docs/architecture/refactoring-plan.md) | 架构审计结论与分阶段重构计划（P0–P5） |
+| [architecture/backlog.md](architecture/backlog.md) | 未完成事项与起手方式 |
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | 版本变更记录 |
 | [docs/SECURITY.md](docs/SECURITY.md) | 安全问题反馈方式 |
 | [LICENSE](LICENSE) | MIT |

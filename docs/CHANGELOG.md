@@ -19,7 +19,7 @@
 
 ### 重构
 
-架构审计后的 P0 / P1 两步（详见 [docs/architecture/refactoring-plan.md](architecture/refactoring-plan.md)），产品行为不变：
+架构审计后的 P0 / P1 两步（详见 [docs/archive/refactoring-plan.md](archive/refactoring-plan.md)），产品行为不变：
 
 - **新增 `src/domain/` 领域层**：`covenantStats`（盟约统计）、`filterOperators`（筛选与 Ban）、`teamRules`（上限、跨版本判定、版本回退）、`equipRules`（槽位、变形同构体、组合装、装配校验）、`shareImport`（分享码解析与导入映射）全部改为无 Vue 依赖的纯函数，`src/domain/*.ts` 附带类型定义
 - `useCovenantStats` 只保留响应式胶水；`versionSource` 参数可选，不传时才回退到全局当前版本
@@ -94,7 +94,7 @@
 
 #### S13 错误契约与 D3 形状契约
 
-两项技术债（方案见 [debt-plan.md](architecture/debt-plan.md)）。**用户可见行为不变，分享码协议不变**：
+两项技术债（方案见 [debt-plan.md](archive/debt-plan.md)）。**用户可见行为不变，分享码协议不变**：
 
 - 新增 `features/sharing/domain/shareErrors.ts`：13 个 `ShareErrorCode` + `ShareError`，
   领域层原本 15 处 `throw new Error("<中文>")` 全部改为抛 code；文案迁到
@@ -140,16 +140,18 @@
 - 引入 ESLint 9（扁平配置，`vue/essential` + `@typescript-eslint` recommended）与 Prettier
 - `vitest --coverage`（v8）可用，先只测量不设阈值
 - `package.json` 新增 `lint` / `lint:fix` / `format` / `format:check` / `typecheck` / `test:run` / `coverage`
+- `package.json` 新增 `verify`：`typecheck && lint && test:run && knip`，改完一条命令跑完四项
 - `tsconfig.app.json` 开启 `allowJs` 并补 `@/*` 路径映射，使 `domain/*.ts` 能引用 JS 模块并通过 `vue-tsc`
 
 ### 文档
 
 - 重写根目录 `README.md`：补充真实截图、双版本与装备能力、分享码 v3 说明、文档索引
-- 新增 `CONTRIBUTING.md`：贡献流程、分层约定、提交规范、移动端与分享码兼容铁律、数据更新流程
+- 新增 `architecture/backlog.md`：唯一待办清单（S11 类型化、重写 CONTRIBUTING、目录统一等），做完即删条目
+- P0–P5 重构计划与 D3/S13/S11 技术债方案移入 `docs/archive/`：六个阶段全部完成，两份文档转为决策依据，不再当计划读
+- 新增后删除 `CONTRIBUTING.md`：内容偏项目介绍，照着做不出一次可提交的改动，待按操作手册重写（四块骨架见 backlog）
+- 删除 `frontend/docs/README.md` 与 `frontend/README.md`：文档统一到根目录。前者指向不存在的 `frontend/README.md`，列的 `SaveTeamModal` / `src/composables` 等早已不存在
 - 新增 `architecture/overview.md` / `module-map.md` / `data-model.md` / `data-flow.md`
-- 新增 `docs/architecture/refactoring-plan.md`：架构审计结论与 P0–P5 重构计划
 - 新增 `CHANGELOG.md`、`SECURITY.md`、`LICENSE`（MIT）
-- `frontend/README.md` 改为指向根目录，避免两份文档漂移
 - 截图存放于 `docs/screenshots/`
 
 ## [0.7.0] - 2026-11-16

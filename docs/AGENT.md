@@ -31,9 +31,12 @@
 3. architecture/module-map.md：模块职责与依赖方向。
 4. architecture/data-model.md：核心数据结构和模块间数据契约。
 5. architecture/data-flow.md：启动、版本切换、盟约统计、分享码等流程。
-6. architecture/debt-plan.md：待处理技术债（D3 / S13 / S11）的处置方案与执行顺序。
+6. architecture/backlog.md：未完成事项（S11 类型化、重写 CONTRIBUTING 等）与起手方式。
 
 不要无差别读取全部文档。只阅读与当前任务相关的部分。
+
+`docs/archive/` 下是**已完成的方案**（P0–P5 重构、D3 / S13 技术债），没有待办。
+只在追查「当初为什么这么定」时查阅，不要当成计划执行。
 
 如果文档与实际实现存在冲突：
 - 先识别冲突。
@@ -106,7 +109,8 @@
 修改完成后：
 
 1. 只在系统边界做校验
-2. 执行必要的全量检查。
+2. 执行必要的全量检查。`frontend/` 下至少跑一次 `npm run verify`（类型 + lint + 测试 + 死代码），
+   改动涉及构建配置时再跑 `npm run build`。
 3. 检查 git diff。
 4. 检查是否存在无关修改。
 5. 汇报实际执行的命令和结果。
